@@ -4,6 +4,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import SelectSurveillanceCenter from './pages/SelectSurveillanceCenter';
 import CreateSurveillanceCenter from './pages/CreateSurveillanceCenter';
+import Cameras from './pages/Cameras';
+import Dashboard from './pages/Dashboard';
+import Events from './pages/Events';
 
 const App: React.FC = () => {
     return (
@@ -13,7 +16,10 @@ const App: React.FC = () => {
                 <Route path="/register" element={<Register />} />
                 <Route path="/select-surveillance-center" element={<SelectSurveillanceCenter />} />
                 <Route path="/create-surveillance-center" element={<CreateSurveillanceCenter />} />
-                <Route path="/dashboard" element={<div>Dashboard</div>} />
+
+                <Route path="/cameras" element={<Cameras />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/events" element={<Events />} />
             </Routes>
         </Router>
     );

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import CameraList from '../components/CameraList';
 import CreateCameraModal from '../components/CreateCameraModal';
-import Button from '../components/Button';
+import Button from '../components/Button';  // Importando el componente Button
 
 const Cameras: React.FC = () => {
     const [cameras, setCameras] = useState<{ name: string, url: string }[]>([]);
@@ -26,6 +26,7 @@ const Cameras: React.FC = () => {
                     type="button"
                     text="Agregar Cámara"
                     onClick={() => setShowModal(true)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white mb-6"
                 />
 
                 <CameraList cameras={cameras} onClose={handleCloseCamera} />

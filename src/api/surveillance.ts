@@ -1,11 +1,15 @@
-import axios from 'axios';
+// src/api/surveillance.ts
+import apiClient from './axiosInstance';
 
-const API_URL = 'http://localhost:8000/api';
+export interface Center {
+    id: number;
+    name: string;
+    latitude: number;
+    longitude: number;
+}
 
-export const getSurveillanceCenters = () => {
-    return axios.get(`${API_URL}/centers`);
-};
+export const getSurveillanceCenters = () =>
+  apiClient.get<Center[]>('/surveillance/');
 
-export const createSurveillanceCenter = (name: string, latitude: string, longitude: string) => {
-    return axios.post(`${API_URL}/create-center`, { name, latitude, longitude });
-};
+export const createSurveillanceCenter = (name: string, latitude: number, longitude: number) =>
+  apiClient.post<Center>('/surveillance/', { name, latitude, longitude });

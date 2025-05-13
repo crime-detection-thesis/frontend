@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import CameraList from '../components/CameraList';
 import CreateCameraModal from '../components/CreateCameraModal';
 import Button from '../components/Button';
-import { addCamera } from '../api/camera';
+import {connectCamera} from '../api/camera';
 import Navbar from "../components/Navbar.tsx"; // Importamos la función addCamera
 
 const Cameras: React.FC = () => {
@@ -11,7 +11,7 @@ const Cameras: React.FC = () => {
 
     const handleAddCamera = async (name: string, url: string) => {
         try {
-            const response = await addCamera(name, url);
+            const response = await connectCamera(name, url);
             console.log('Cámara conectada:', response);
             setCameras((prevCameras) => [...prevCameras, { name, url }]);
         } catch (error) {

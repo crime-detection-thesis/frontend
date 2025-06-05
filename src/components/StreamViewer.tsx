@@ -12,8 +12,14 @@ const StreamViewer: React.FC<StreamViewerProps> = ({ rtspUrl, cameraName }) => {
   const pcRef = useRef<RTCPeerConnection | null>(null);
 
   useEffect(() => {
+    console.log(`Connecting to camera: ${cameraName} with RTSP URL: ${rtspUrl}`);
     if (videoRef.current) {
+      console.log(`Video element found for camera: ${cameraName}`);
       const { ws, pc } = connectToWebSocket(cameraName, rtspUrl, videoRef.current);
+      if (!ws || !pc) {
+        console.error(`Failed to connect WebSocket or PeerConnection for camera: ${cameraName}`);
+        return;
+      }
 
       wsRef.current = ws;
       pcRef.current = pc;

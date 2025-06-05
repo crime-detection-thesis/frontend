@@ -27,18 +27,13 @@ export default function CreateSurveillanceCenter() {
     const [markerPos, setMarkerPos] = useState<google.maps.LatLngLiteral | null>(null);
 
     // refs para mapa y marcador
-    const mapRef = useRef<google.maps.Map>();
-    const markerRef = useRef<google.maps.marker.AdvancedMarkerElement>();
-
-    if (!pending) {
-        navigate('/register');
-        return null;
-    }
+    const mapRef = useRef<google.maps.Map | undefined>(undefined);
+    const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
 
     // carga la API de Google Maps, incluida la librería marker
     const { isLoaded, loadError } = useLoadScript({
         googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-        libraries: LIBRARIES,
+        libraries: [...LIBRARIES], // Convert to mutable array
     });
 
     // Cada vez que cambie markerPos, limpiamos el viejo y creamos el nuevo
@@ -47,8 +42,8 @@ export default function CreateSurveillanceCenter() {
 
         // elimina marcador previo
         if (markerRef.current) {
-            markerRef.current.setMap(null);
-            markerRef.current = undefined;
+            markerRef.current.map = null;
+            markerRef.current = null;
         }
 
         // crea uno nuevo si hay posición
@@ -60,6 +55,11 @@ export default function CreateSurveillanceCenter() {
             });
         }
     }, [markerPos, name]);
+
+    if (!pending) {
+        navigate('/register');
+        return null;
+    }
 
     const handleMapClick = (e: google.maps.MapMouseEvent) => {
         if (e.latLng) {
@@ -88,11 +88,21 @@ export default function CreateSurveillanceCenter() {
                 password: pending.password,
                 surveillance_center_id: center.id,
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            alert(
-              err.response?.data || 'Error creando o registrando. Revisa consola.'
-            );
+            if (
+              typeof err === 'object' &&
+              err !== null &&
+              'response' in err &&
+              typeof (err as { response?: { data?: string } }).response === 'object'
+            ) {
+              alert(
+                (err as { response?: { data?: string } }).response?.data ||
+                  'Error creando o registrando. Revisa consola.'
+              );
+            } else {
+              alert('Error creando o registrando. Revisa consola.');
+            }
         }
     };
 
@@ -127,7 +137,7 @@ export default function CreateSurveillanceCenter() {
                     center={initialCenter}
                     zoom={12}
                     options={MAP_OPTIONS}
-                    onLoad={(map) => (mapRef.current = map)}
+                    onLoad={(map) => { mapRef.current = map; }}
                     onClick={handleMapClick}
                   />
                   {markerPos && (

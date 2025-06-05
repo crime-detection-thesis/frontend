@@ -1,5 +1,6 @@
 // src/contexts/RegistrationContext.tsx
-import React, { createContext, useState, ReactNode, useContext } from 'react';
+import React, { createContext, useState, useContext } from 'react';
+import type { ReactNode } from 'react';
 
 type PendingUser = { email: string; username: string; password: string };
 

@@ -95,7 +95,8 @@
 
 
 // src/api/axiosInstance.ts
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosError } from 'axios';
+import type { AxiosResponse } from 'axios';
 import {
   getAccessToken,
   getRefreshToken,
@@ -103,7 +104,15 @@ import {
   clearTokens,
 } from './tokenService';
 
+// Extiende la interfaz para permitir _retry
+declare module 'axios' {
+  export interface InternalAxiosRequestConfig {
+    _retry?: boolean;
+  }
+}
+
 const API_URL = 'http://localhost:8000/api';
+// const API_URL = 'http://backend:8000/api';
 
 // Rutas que NUNCA deben disparar el flujo de refresh
 const SKIP_URLS = [
@@ -118,7 +127,7 @@ const apiClient = axios.create({
 });
 
 // 1) Request interceptor: añade el access token
-apiClient.interceptors.request.use((config: AxiosRequestConfig) => {
+apiClient.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -130,10 +139,10 @@ apiClient.interceptors.request.use((config: AxiosRequestConfig) => {
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (token: string) => void;
-  reject: (err: any) => void;
+  reject: (err: unknown) => void;
 }> = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach(prom => {
     if (error) prom.reject(error);
     else prom.resolve(token!);

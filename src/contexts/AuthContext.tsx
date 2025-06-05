@@ -1,12 +1,13 @@
 // src/contexts/AuthContext.tsx
-import React, {
+import {
   createContext,
   useContext,
   useState,
   useEffect,
-  ReactNode,
 } from 'react';
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import type { ReactNode } from 'react';
+import axios, { AxiosError } from 'axios';
+import type { AxiosInstance } from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
@@ -48,11 +49,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   let isRefreshing = false;
   let failedQueue: Array<{
     resolve: (token: string) => void;
-    reject: (err: any) => void;
+    reject: (err: unknown) => void;
   }> = [];
-  const processQueue = (err: any, token: string | null = null) => {
+  const processQueue = (err: unknown, token: string | null = null) => {
     failedQueue.forEach(p => {
-      err ? p.reject(err) : p.resolve(token!);
+      if (err) {
+        p.reject(err);
+      } else {
+        p.resolve(token!);
+      }
     });
     failedQueue = [];
   };
@@ -86,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               // setUserName(data.username); // si lo envías en el payload
 
               const payload = decodeJWT(data.access);
-              setUserName(payload?.username ?? null);
+              setUserName(typeof payload?.username === 'string' ? payload.username : null);
 
               processQueue(null, data.access);
               originalRequest.headers!['Authorization'] = `Bearer ${data.access}`;
@@ -138,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         );
         setAccessToken(data.access);
         const payload = decodeJWT(data.access);
-        setUserName(payload?.username ?? null);
+        setUserName(typeof payload?.username === 'string' ? payload.username : null);
       } catch {
         // **silence**, no console.error
         setAccessToken(null);
@@ -169,7 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Decodifica y saca username
     const payload = decodeJWT(data.access);
-    setUserName(payload?.username ?? null);
+    setUserName(typeof payload?.username === 'string' ? payload.username : null);
 
     navigate('/dashboard');
   };
@@ -208,7 +213,7 @@ export const useAuth = (): AuthContextType => {
   return ctx;
 };
 
-function decodeJWT(token: string): { [key: string]: any } | null {
+function decodeJWT(token: string): Record<string, unknown> | null {
   try {
     const payload = token.split('.')[1];
     const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));

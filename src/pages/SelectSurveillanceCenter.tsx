@@ -262,11 +262,11 @@
 
 
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRegistration } from '../contexts/RegistrationContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Center, getSurveillanceCenters } from '../api/surveillance';
+import { type Center, getSurveillanceCenters } from '../api/surveillance';
 import Button from '../components/Button';
 import FormContainer from '../components/FormContainer';
 

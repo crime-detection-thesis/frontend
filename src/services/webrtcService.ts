@@ -17,10 +17,28 @@ export const connectToWebSocket = (cameraName: string, rtspUrl: string, videoEle
       offerToReceiveAudio: false,
       offerToReceiveVideo: true,
     });
+
     await pc.setLocalDescription(offer);
+
+    const waitForIceGatheringComplete = new Promise<void>((resolve) => {
+      if (pc.iceGatheringState === "complete") {
+        resolve();
+      } else {
+        const checkState = () => {
+          if (pc.iceGatheringState === "complete") {
+            pc.removeEventListener("icegatheringstatechange", checkState);
+            resolve();
+          }
+        };
+        pc.addEventListener("icegatheringstatechange", checkState);
+      }
+    });
+
+    await waitForIceGatheringComplete;
+
     ws.send(JSON.stringify({
-      sdp: pc.localDescription.sdp,
-      type: pc.localDescription.type,
+      sdp: pc.localDescription?.sdp,
+      type: pc.localDescription?.type,
       rtspUrl,
       cameraName
     }));

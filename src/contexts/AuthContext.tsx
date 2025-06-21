@@ -32,12 +32,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userName, setUserName] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Creamos un Axios instance que usará el context
-  const apiClient = axios.create({ baseURL: 'http://localhost:8000/api' });
-  // Siempre enviar cookies (para el refresh token)
+  const apiClient = axios.create({ baseURL:  `${import.meta.env.VITE_API_URL}/api` });
   apiClient.defaults.withCredentials = true;
 
-  // === RQ: Adjuntar el access token desde el state ===
   apiClient.interceptors.request.use(cfg => {
     if (accessToken && cfg.headers) {
       cfg.headers.Authorization = `Bearer ${accessToken}`;
@@ -45,7 +42,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return cfg;
   });
 
-  // === RQ: Manejo 401 con refresh automático ===
   let isRefreshing = false;
   let failedQueue: Array<{
     resolve: (token: string) => void;
@@ -78,17 +74,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         isRefreshing = true;
-        // Llamamos al endpoint de refresh; la cookie HttpOnly se envía automáticamente
         return new Promise((resolve, reject) => {
-          axios
-            .post(
-              'http://localhost:8000/api/user/token/refresh/',
-              {},
-              { withCredentials: true }
-            )
+          apiClient.post('/user/token/refresh/', {})
             .then(({ data }) => {
               setAccessToken(data.access);
-              // setUserName(data.username); // si lo envías en el payload
 
               const payload = decodeJWT(data.access);
               setUserName(typeof payload?.username === 'string' ? payload.username : null);
@@ -99,7 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             })
             .catch(err => {
               processQueue(err, null);
-              logout(); // inmediate logout on refresh failure
+              logout();
               reject(err);
             })
             .finally(() => {
@@ -111,68 +100,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   );
 
-  // === RQ: Al montar, intentamos un refresh inmediato ===
-  // useEffect(() => {
-  //   (async () => {
-  //     try {
-  //       const { data } = await axios.post(
-  //         'http://localhost:8000/api/user/token/refresh/',
-  //         {},
-  //         { withCredentials: true }
-  //       );
-  //       // setAccessToken(data.access);
-  //       // setUserName(data.username);
-  //
-  //       setAccessToken(data.access);
-  //       const payload = decodeJWT(data.access);
-  //       setUserName(payload?.username ?? null);
-  //     } catch {
-  //       setAccessToken(null);
-  //       setUserName(null);
-  //     }
-  //   })();
-  // }, []);
-
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await axios.post(
-          'http://localhost:8000/api/user/token/refresh/',
-          {},
-          { withCredentials: true }
-        );
+        const { data } = await apiClient.post('/user/token/refresh/', {});
         setAccessToken(data.access);
         const payload = decodeJWT(data.access);
         setUserName(typeof payload?.username === 'string' ? payload.username : null);
       } catch {
-        // **silence**, no console.error
         setAccessToken(null);
         setUserName(null);
       }
     })();
   }, []);
 
-  // === Métodos de Auth ===
-  // const login = async (email: string, password: string) => {
-  //   const { data } = await axios.post(
-  //     'http://localhost:8000/api/user/login/',
-  //     { email, password },
-  //     { withCredentials: true }
-  //   );
-  //   setAccessToken(data.access);
-  //   setUserName(data.username);
-  //   navigate('/dashboard');
-  // };
-
   const login = async (email: string, password: string) => {
-    const { data } = await axios.post(
-      'http://localhost:8000/api/user/login/',
-      { email, password },
-      { withCredentials: true }
-    );
+    const { data } = await apiClient.post('/user/login/', { email, password });
     setAccessToken(data.access);
 
-    // Decodifica y saca username
     const payload = decodeJWT(data.access);
     setUserName(typeof payload?.username === 'string' ? payload.username : null);
 
@@ -192,9 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (payload: RegisterData) => {
-    // Registra usuario; backend en response de register no devuelve tokens
     await apiClient.post('/user/register/', payload);
-    // luego login automático
     await login(payload.email, payload.password);
   };
 

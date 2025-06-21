@@ -111,8 +111,9 @@ declare module 'axios' {
   }
 }
 
-const API_URL = 'http://localhost:8000/api';
+// const API_URL = 'http://localhost:8000/api';
 // const API_URL = 'http://backend:8000/api';
+const API_URL = `${import.meta.env.VITE_API_URL}/api`;
 
 // Rutas que NUNCA deben disparar el flujo de refresh
 const SKIP_URLS = [

@@ -1,6 +1,6 @@
 export const connectToWebSocket = (cameraName: string, rtspUrl: string, videoElement: HTMLVideoElement | null) => {
 //   const ws = new WebSocket(`ws://localhost:8002/ws/${cameraName}`);
-  const ws = new WebSocket(`${import.meta.env.VITE_SIGNALING_URL}/ws/${cameraName}`);
+  const ws = new WebSocket(`ws://${import.meta.env.VITE_SIGNALING_URL}/ws/${cameraName}`);
   const pc = new RTCPeerConnection({
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' }

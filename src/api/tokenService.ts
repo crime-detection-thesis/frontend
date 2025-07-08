@@ -1,22 +1,21 @@
 const ACCESS_KEY = 'access_token';
-const REFRESH_KEY = 'refresh_token';
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_KEY);
 }
 
+// Con cookies httpOnly, el refresh token no es accesible vía JS
 export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_KEY);
+  return null; // siempre null: se toma de la cookie en el backend
 }
 
-export function setTokens(tokens: { access: string; refresh: string }) {
+export function setTokens(tokens: { access: string; refresh?: string }) {
   localStorage.setItem(ACCESS_KEY, tokens.access);
-  localStorage.setItem(REFRESH_KEY, tokens.refresh);
+  // ignoramos refresh, está en cookie httpOnly
 }
 
 export function clearTokens() {
   localStorage.removeItem(ACCESS_KEY);
-  localStorage.removeItem(REFRESH_KEY);
 }
 
 // Decodifica el payload de un JWT

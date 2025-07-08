@@ -1,5 +1,5 @@
-// src/api/scheduleRefresh.ts
-import { refreshToken } from './auth';
+import { apiClient } from './apiInstance';
+import { setTokens } from './tokenService';
 
 export function scheduleTokenRefresh() {
   const token = localStorage.getItem('access_token');
@@ -12,7 +12,9 @@ export function scheduleTokenRefresh() {
   if (msUntilExpiry <= 0) return;
   setTimeout(async () => {
     try {
-      await refreshToken();
+      const { data } = await apiClient.post('/user/token/refresh/', {});
+      setTokens(data);
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.access}`;
       scheduleTokenRefresh(); // re-programa
     } catch {
       // si falla, forzar logout

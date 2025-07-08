@@ -294,7 +294,7 @@ export default function SelectSurveillanceCenter() {
       email: pending.email,
       username: pending.username,
       password: pending.password,
-      surveillance_center_id: selectedId as number,
+      surveillance_center_id: selectedId,
     });
   };
 

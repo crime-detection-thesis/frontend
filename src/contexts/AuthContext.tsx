@@ -6,30 +6,34 @@ import {
   useEffect,
 } from 'react';
 import type { ReactNode } from 'react';
+import { setTokens, clearTokens } from '../api/tokenService';
+import { scheduleTokenRefresh } from '../api/scheduleRefresh';
+import type { RegisterData } from '../interfaces/auth.interface';
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
 import { useNavigate } from 'react-router-dom';
+import type { Camera } from '../interfaces/camera.interface';
 
 interface AuthContextType {
+  userId: number;
   userName: string | null;
+  cameras: Camera[];
+  setCameras: (cameras: Camera[]) => void;
+  surveillanceCenterId: number;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   apiClient: AxiosInstance;
 }
 
-interface RegisterData {
-  email: string;
-  username: string;
-  password: string;
-  surveillance_center_id: number;
-}
-
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [cameras, setCameras] = useState<Camera[]>([]);
+  const [surveillanceCenterId, setSurveillanceCenterId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   const apiClient = axios.create({ baseURL:  `${import.meta.env.VITE_API_URL}/api` });
@@ -78,9 +82,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           apiClient.post('/user/token/refresh/', {})
             .then(({ data }) => {
               setAccessToken(data.access);
+  setTokens(data);
+  scheduleTokenRefresh();
 
               const payload = decodeJWT(data.access);
-              setUserName(typeof payload?.username === 'string' ? payload.username : null);
+              setUserId(typeof payload?.user_id === 'number' ? payload.user_id : 0);
+              setUserName(typeof payload?.username === 'string' ? payload.username : '');
+              setSurveillanceCenterId(typeof payload?.surveillance_center === 'number' ? payload.surveillance_center : 0);
 
               processQueue(null, data.access);
               originalRequest.headers!['Authorization'] = `Bearer ${data.access}`;
@@ -105,11 +113,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { data } = await apiClient.post('/user/token/refresh/', {});
         setAccessToken(data.access);
+  setTokens(data);
+  scheduleTokenRefresh();
         const payload = decodeJWT(data.access);
-        setUserName(typeof payload?.username === 'string' ? payload.username : null);
+        console.log(payload);
+        setUserId(typeof payload?.user_id === 'number' ? payload.user_id : 0);
+        setUserName(typeof payload?.username === 'string' ? payload.username : '');
+        setSurveillanceCenterId(typeof payload?.surveillance_center === 'number' ? payload.surveillance_center : 0);
       } catch {
         setAccessToken(null);
-        setUserName(null);
+        setUserName('');
       }
     })();
   }, []);
@@ -117,9 +130,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     const { data } = await apiClient.post('/user/login/', { email, password });
     setAccessToken(data.access);
+  setTokens(data);
+  scheduleTokenRefresh();
 
     const payload = decodeJWT(data.access);
-    setUserName(typeof payload?.username === 'string' ? payload.username : null);
+    console.log(payload);
+    setUserId(typeof payload?.user_id === 'number' ? payload.user_id : 0);
+    setUserName(typeof payload?.username === 'string' ? payload.username : '');
+    setSurveillanceCenterId(typeof payload?.surveillance_center === 'number' ? payload.surveillance_center : 0);
 
     navigate('/dashboard');
   };
@@ -130,8 +148,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       /* ignore */
     } finally {
+      clearTokens();
       setAccessToken(null);
-      setUserName(null);
+      setUserName('');
       navigate('/login');
     }
   };
@@ -143,7 +162,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ userName, login, logout, register, apiClient }}
+      value={{ 
+        userId: userId ?? 0,
+        userName, 
+        login, 
+        logout, 
+        register, 
+        apiClient, 
+        cameras, 
+        setCameras,
+        surveillanceCenterId: surveillanceCenterId ?? 0
+      }}
     >
       {children}
     </AuthContext.Provider>

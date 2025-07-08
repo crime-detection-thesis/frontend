@@ -12,7 +12,7 @@
 
 
 // src/api/auth.ts
-import apiClient from './axiosInstance';
+import { apiClient } from './apiInstance';
 import { setTokens, clearTokens, getRefreshToken } from './tokenService';
 
 export interface RegisterData {

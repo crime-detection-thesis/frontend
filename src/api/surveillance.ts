@@ -1,5 +1,4 @@
-// src/api/surveillance.ts
-import apiClient from './axiosInstance';
+import { apiClient } from './apiInstance';
 
 export interface Center {
     id: number;

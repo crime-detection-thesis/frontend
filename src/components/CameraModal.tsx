@@ -88,7 +88,7 @@ const CameraModal: React.FC<CameraModalProps> = ({
               </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" text="Cancelar" variant="secondary" onClick={onClose} />
-                <Button type="submit" text="Guardar" variant="success" />
+                <Button type="submit" text="Guardar" variant="primary" />
               </div>
             </form>
           </>

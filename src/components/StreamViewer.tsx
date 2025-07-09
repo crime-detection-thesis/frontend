@@ -1,49 +1,40 @@
-// components/StreamViewer.tsx
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { connectToWebSocket } from '../services/webrtcService';
-import type { Camera } from '../interfaces/camera.interface';
 
 interface StreamViewerProps {
   id: number;
   userId: number;
   onError: (id: number, msg: string) => void;
-  cameras: Camera[];
   onDetect?: (cameraId: number) => void;
 }
 
-const THROTTLE_MS = 10_000;    // 10 segundos
+const THROTTLE_MS = 10_000;
 
-
-const StreamViewer: React.FC<StreamViewerProps> = ({ id, userId, onError, cameras, onDetect }) => {
+const StreamViewer: React.FC<StreamViewerProps> = ({ id, userId, onError, onDetect }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const wsRef = useRef<WebSocket>(null);
   const pcRef = useRef<RTCPeerConnection>(null);
-  // justo debajo de donde defines videoRef…
   const lastAlertTimes = useRef<Record<number, number>>({});
+  const [showAlert, setShowAlert] = useState(false);
+  const alertTimeoutRef = useRef<number | null>(null);
 
+  const onDetection = useCallback((cameraId: number) => {
+    const now = Date.now();
+    const last = lastAlertTimes.current[cameraId] || 0;
 
-  const [cameraOnAlert, setCameraOnAlert] = useState<string | null>(null);
+    if (now - last > THROTTLE_MS) {
+      lastAlertTimes.current[cameraId] = now;
+      
+      if (alertTimeoutRef.current !== null) {
+        window.clearTimeout(alertTimeoutRef.current);
+      }
+      
+      setShowAlert(true);
+      alertTimeoutRef.current = window.setTimeout(() => setShowAlert(false), 5_000);
 
-
-  // cambia la firma para aceptar cameraId y cameras, pero realmente solo necesitas ID
-const onDetection = useCallback((cameraId: number) => {
-  const now = Date.now();
-  const last = lastAlertTimes.current[cameraId] || 0;
-
-  // solo disparamos si han pasado 10s para esa cámara
-  if (now - last > THROTTLE_MS) {
-    lastAlertTimes.current[cameraId] = now;
-
-    // obtenemos el nombre
-    const cam = cameras.find(c => c.id === cameraId);
-    const name = cam?.name ?? `#${cameraId}`;
-
-    setCameraOnAlert(name);
-    setTimeout(() => setCameraOnAlert(null), 5_000);
-
-    if (onDetect) onDetect(cameraId);
-  }
-}, [cameras]);
+      if (onDetect) onDetect(cameraId);
+    }
+  }, [onDetect]);
 
 
   useEffect(() => {
@@ -56,7 +47,6 @@ const onDetection = useCallback((cameraId: number) => {
       (msg) => {
         onError(id, msg);
       },
-      cameras,
       onDetection
     );
     wsRef.current = ws;
@@ -69,17 +59,35 @@ const onDetection = useCallback((cameraId: number) => {
   }, [id, userId, onDetection]);
 
   return (
-    <>
-      <video ref={videoRef} autoPlay playsInline controls className="rounded w-full" />
-      {cameraOnAlert && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded shadow-lg z-50">
-          ⚠️ Delito detectado en {cameraOnAlert}
+    <div className="space-y-2">
+      <div className="relative overflow-hidden rounded-lg shadow bg-black">
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          controls 
+          className="w-full"
+          style={{ aspectRatio: '16/9' }}
+        />
+      </div>
+      {showAlert && (
+        <div className="flex items-center bg-amber-100 text-amber-800 px-4 py-2 rounded-md border border-amber-200 w-full justify-center">
+          <svg 
+            className="w-4 h-4 mr-2 flex-shrink-0" 
+            fill="currentColor" 
+            viewBox="0 0 20 20" 
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path 
+              fillRule="evenodd" 
+              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" 
+              clipRule="evenodd" 
+            />
+          </svg>
+          <span className="text-sm font-bold">Actividad sospechosa detectada</span>
         </div>
       )}
-
-
-
-    </>
+    </div>
   );
 };
 

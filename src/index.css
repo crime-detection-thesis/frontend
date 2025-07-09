@@ -1,10 +1,18 @@
-/* src/index.css */
 @import "tailwindcss";
+
+/* — Variables de paleta — */
+:root {
+  --color-primary: #27ae60;        /* verde principal oscuro */
+  --color-primary-hover: #2ecc71;  /* verde claro al hover */
+
+  --color-danger: #dc2626;         /* rojo destructivo (red-600) */
+  --color-danger-hover: #b91c1c;   /* rojo más oscuro al hover (red-700) */
+}
 
 /* — Base dark mode — */
 html, body {
-  background-color: #343541;   /* fondo principal */
-  color: #D1D5DB;              /* texto primario */
+  background-color: #1F2937;
+  color: #D1D5DB;
   height: 100%;
   width: 100%;
   margin: 0;
@@ -12,52 +20,50 @@ html, body {
 }
 
 a {
-  color: #10A37F;              /* acento verde ChatGPT */
+  color: var(--color-primary);
   font-weight: 500;
   text-decoration: none;
   transition: color 0.2s;
 }
-
 a:hover {
-  color: #1CE9B6;              /* verde claro al pasar */
+  color: var(--color-primary-hover);
 }
 
 input,
 select,
 textarea {
-  background-color: #444654;   /* superficie gris */
-  color: #D1D5DB;              /* texto primario */
-  border: 1px solid #202123;   /* borde oscuro */
-  border-radius: 0.375rem;      /* 6px */
+  background-color: #444654;
+  color: #D1D5DB;
+  border: 1px solid #202123;
+  border-radius: 0.375rem;
   padding: 0.5rem 0.75rem;
   transition: box-shadow 0.2s;
 }
 
+/* halo verde al focus */
 input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #10A37F; /* halo verde */
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
-/* Estilos base para botones que no son de componentes personalizados */
+/* Botones “genéricos” (sin bg- ni button-) → verde primario */
 button:not([class*="bg-"]):not([class*="button-"]) {
-  background-color: #10A37F;   /* botón primario verde */
-  color: #FFFFFF;              /* texto blanco */
+  background-color: var(--color-primary);
+  color: #FFFFFF;
   border: none;
   border-radius: 0.375rem;
   padding: 0.5rem 1rem;
   cursor: pointer;
   transition: background-color 0.2s, box-shadow 0.2s;
 }
-
 button:not([class*="bg-"]):not([class*="button-"]):hover {
-  background-color: #1CE9B6;   /* verde claro al pasar */
+  background-color: var(--color-primary-hover);
 }
-
 button:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #10A37F; /* halo verde */
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 /* — Light mode fallback — */
@@ -79,7 +85,7 @@ button:focus {
     color: #213547;
     border: 1px solid #D1D5DB;
   }
-  button {
+  button:not([class*="bg-"]):not([class*="button-"]) {
     background-color: #F9F9F9;
     color: #213547;
   }

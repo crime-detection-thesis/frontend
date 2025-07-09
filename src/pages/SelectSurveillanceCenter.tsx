@@ -301,16 +301,32 @@ export default function SelectSurveillanceCenter() {
   return (
     <FormContainer title="Selecciona o crea un centro">
       <select
-        className="w-full border p-2 rounded mb-4"
+        className="w-full border border-gray-300 bg-white p-2 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-gray-800"
         value={selectedId}
         onChange={e => setSelectedId(e.target.value === '' ? '' : Number(e.target.value))}
       >
-        <option value="" className="text-black">-- Elige un centro --</option>
-        {centers.map(c => <option key={c.id} value={c.id} className="text-black">{c.name}</option>)}
+        <option value="">-- Elige un centro --</option>
+        {centers.map(c => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
       </select>
-      <div className="flex space-x-2">
-        <Button type="button" text="Finalizar registro" className="bg-blue-500 hover:bg-blue-600" onClick={onContinue}/>
-        <Button type="button" text="Crear nuevo centro" className="bg-gray-500 hover:bg-gray-600" onClick={() => navigate('/create-surveillance-center')}/>
+      <div className="flex flex-col gap-3 mt-6">
+        <Button 
+          type="button" 
+          text={selectedId ? 'Finalizar registro' : 'Crear nuevo centro'}
+          variant="primary"
+          onClick={selectedId ? onContinue : () => navigate('/create-surveillance-center')}
+          className="w-full py-2.5 text-base"
+        />
+        <Button 
+          type="button"
+          text="Volver al registro"
+          variant="secondary"
+          onClick={() => navigate(-1)}
+          className="w-full py-2.5 text-base"
+        />
       </div>
     </FormContainer>
   );

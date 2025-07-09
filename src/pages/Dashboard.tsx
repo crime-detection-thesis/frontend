@@ -1,34 +1,58 @@
-// src/pages/Dashboard.tsx
 import React, { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
-import { getMetrics, getEventsOverTime, getEventsByState, getEventsByCamera,
-         type Metrics, type Point, type StateSlice, type CameraSlice } from '../api/dashboard';
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell
-} from 'recharts';                              // o la librería que prefieras
-import Card from '../components/Card';
 import Loader from '../components/Loader';
-import { Legend, LabelList } from 'recharts';
+import Card from '../components/Card';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  getMetrics,
+  getEventsOverTime,
+  getEventsByState,
+  getEventsByCamera,
+  type Metrics,
+  type Point,
+  type StateSlice,
+  type CameraSlice
+} from '../api/dashboard';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  LabelList,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  BarChart,
+  Bar
+} from 'recharts';
 
-const STATE_COLORS: Record<string,string> = {
-    Confirmado:    '#10A37F',
-    'Falso positivo': '#DC2626',
-    Pendiente:     '#FBBF24',
-  };
+const STATE_COLORS: Record<string, string> = {
+  Confirmado:     '#22C55E',
+  'Falso positivo': '#F87171',
+  Pendiente:      '#FBBF24',
+};
+
 
 const Dashboard: React.FC = () => {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [overTime, setOverTime] = useState<Point[]>([]);
   const [byState, setByState] = useState<StateSlice[]>([]);
   const [byCamera, setByCamera] = useState<CameraSlice[]>([]);
+  const { surveillanceCenterId } = useAuth();
 
   useEffect(() => {
-    getMetrics().then(setMetrics);
-    getEventsOverTime(30).then(setOverTime);
-    getEventsByState().then(setByState);
-    getEventsByCamera(10).then(setByCamera);
-  }, []);
+    if (surveillanceCenterId > 0) {
+      Promise.all([
+        getMetrics(surveillanceCenterId).then(setMetrics),
+        getEventsOverTime(surveillanceCenterId, 30).then(setOverTime),
+        getEventsByState(surveillanceCenterId).then(setByState),
+        getEventsByCamera(surveillanceCenterId, 10).then(setByCamera),
+      ]).catch(console.error);
+    }
+  }, [surveillanceCenterId]);
 
   if (!metrics) {
     return (
@@ -42,92 +66,94 @@ const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-800 text-gray-300">
       <Navbar />
-      <main className="p-6 space-y-6">
-        <h1 className="text-2xl text-white font-semibold">Dashboard</h1>
 
-        {/* Métricas clave */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Card title="Total Cámaras">{metrics.total_cameras}</Card>
-          <Card title="Cámaras Activas (24h)">{metrics.active_cameras}</Card>
-          <Card title="Total Eventos">{metrics.total_events}</Card>
-          <Card title="Pendientes">{metrics.pending_events}</Card>
-          <Card title="Confirmados">{metrics.confirmed_events}</Card>
-          <Card title="Falsos Positivos">{metrics.false_positives}</Card>
+      <main className="p-6">
+
+        <div className="grid grid-cols-6 gap-3 mb-6">
+          <div><Card title="Total Cámaras" className="p-3 text-sm">{metrics.total_cameras}</Card></div>
+          <div><Card title="Activas (24 h)" className="p-3 text-sm">{metrics.active_cameras}</Card></div>
+          <div><Card title="Total Alertas" className="p-3 text-sm">{metrics.total_events}</Card></div>
+          <div><Card title="Pendientes" className="p-3 text-sm">{metrics.pending_events}</Card></div>
+          <div><Card title="Confirmadas" className="p-3 text-sm">{metrics.confirmed_events}</Card></div>
+          <div><Card title="Falsos Positivos" className="p-3 text-sm">{metrics.false_positives}</Card></div>
         </div>
 
-        {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Eventos por día */}
-          <Card title="Eventos en 30 días">
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart 
-                data={overTime} 
-                margin={{ top: 30, right: 20, left: 0, bottom: 5 }}
-              >
-                <XAxis dataKey="date" tick={{fill: '#D1D5DB'}}/>
-                <YAxis 
-                  tick={{fill: '#D1D5DB'}}
-                  domain={[0, 'dataMax + 1']}
-                />
+        <div className="grid grid-cols-2 gap-6 mb-6">
+          <Card title="Alertas en 30 días" className="p-4">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={overTime} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
+                <XAxis dataKey="date" tick={{ fill: '#D1D5DB', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#D1D5DB', fontSize: 12 }} domain={[0, 'dataMax + 1']} />
                 <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="count" 
-                  stroke="#10A37F" 
-                  dot={false} 
-                >
-                  <LabelList 
-                    dataKey="count"
-                    position="top"
-                    fill="#E5E7EB"
-                    style={{ 
-                      fontSize: '0.75rem',
-                      fontWeight: 'bold'
-                    }}
-                  />
+                <Line type="monotone" dataKey="count" stroke="#10A37F" dot={false}>
+                  <LabelList dataKey="count" position="top" fill="#E5E7EB" style={{ fontSize: 10 }} />
                 </Line>
               </LineChart>
             </ResponsiveContainer>
           </Card>
 
-          {/* Distribución por estado */}
-          <Card title="Estados de eventos">
-            <ResponsiveContainer width="100%" height={250}>
+          <Card title="Estados de Alertas" className="p-4">
+            <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Legend verticalAlign="bottom" align="center" />
+                <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ fontSize: 12 }} />
                 <Pie
                   data={byState}
                   dataKey="count"
                   nameKey="state"
-                  outerRadius={80}
-                  label
+                  outerRadius={70}
+                  innerRadius={30}
+                  labelLine={false}
+                  label={({ name, percent }: { name: string; percent?: number }) =>
+                    `${name} ${percent !== undefined ? Math.round(percent * 100) : 0}%`
+                  }
                 >
                   {byState.map(slice => (
-                    <Cell
-                      key={slice.state}
-                      fill={STATE_COLORS[slice.state] ?? '#8884d8'}
-                    />
+                    <Cell key={slice.state} fill={STATE_COLORS[slice.state] ?? '#8884d8'} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value: number) => `${value}`} />
               </PieChart>
             </ResponsiveContainer>
           </Card>
         </div>
 
-        {/* Eventos por cámara */}
-        <Card title="Top 10 Cámaras por eventos">
+        <Card title="Top 10 Cámaras con más Alertas" className="p-4 w-full">
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={byCamera} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <XAxis dataKey="camera" tick={{fill: '#D1D5DB'}}/>
-              <YAxis tick={{fill: '#D1D5DB'}}/>
-              <Tooltip />
-              <Bar dataKey="count" fill="#10A37F">
-                <LabelList 
-                  dataKey="count" 
-                  position="top"
+            <BarChart
+              data={byCamera}
+              layout="vertical"
+              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+            >
+              <XAxis
+                type="number"
+                tick={{ fill: '#D1D5DB', fontSize: 16 }}
+                axisLine={false}
+                tickLine={false}
+              />
+
+              <YAxis
+                dataKey="camera"
+                type="category"
+                width={160}
+                tickFormatter={str => String(str).replace(/ /g, '\u00A0')}
+                tick={{ fill: '#D1D5DB', fontSize: 14 }}
+                axisLine={false}
+                tickLine={false}
+              />
+
+              <Tooltip cursor={{ fill: 'rgba(255,255,255,0.1)' }} />
+
+              <Bar
+                dataKey="count"
+                fill="#10A37F"
+                barSize={20}
+                radius={[0, 10, 10, 0]}
+              >
+                <LabelList
+                  dataKey="count"
+                  position="right"
                   fill="#E5E7EB"
-                  style={{ fontSize: '0.875rem', fontWeight: 'bold' }}
+                  style={{ fontSize: 16, fontWeight: 'bold' }}
                 />
               </Bar>
             </BarChart>

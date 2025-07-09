@@ -156,8 +156,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (payload: RegisterData) => {
-    await apiClient.post('/user/register/', payload);
-    await login(payload.email, payload.password);
+    try {
+      await apiClient.post('/user/register/', payload);
+      // Después de registrar, hacer login automáticamente
+      await login(payload.email, payload.password);
+    } catch (error) {
+      console.error('Error durante el registro:', error);
+      throw error; // Re-lanzar el error para que pueda ser manejado por el componente que llama
+    }
   };
 
   return (

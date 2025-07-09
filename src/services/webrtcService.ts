@@ -1,12 +1,8 @@
-// services/webrtcService.ts
-import type { Camera } from '../interfaces/camera.interface';
-
 export const connectToWebSocket = (
   id: number,
   userId: number,
   videoElement: HTMLVideoElement | null,
   onError: (msg: string) => void,
-  cameras: Camera[],
   onDetection: (camera_id: number) => void,
 ) => {
   const ws = new WebSocket(

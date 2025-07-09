@@ -91,23 +91,22 @@ useEffect(() => {
 
 
   return (
-    <div className="bg-gray-700 text-white min-h-screen flex flex-col">
+    <div className="text-white min-h-screen flex flex-col">
       <Navbar />
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 p-4 overflow-y-auto">
-          <h2 className="text-2xl mb-4">Cámaras en Vivo</h2>
           <div className="flex justify-between items-center mb-4 space-x-4">
             <Button
               type="button"
               text="Gestionar Cámaras"
               onClick={() => setShowModal(true)}
-              className="bg-blue-500"
+              variant="secondary"
             />
             <Button
               type="button"
               text={showCameras ? "Ocultar cámaras activas" : "Mostrar cámaras activas"}
               onClick={toggleShowCameras}
-              className="bg-green-500 hover:bg-green-600"
+              variant="primary"
             />
           </div>
 

@@ -16,6 +16,25 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { getCrimes, getCrimeDetail, updateCrimeStatus, type GetCrimesParams, type PaginatedResponse } from '../api/crime';
 import type { Crime } from '../interfaces/crime.interface';
 
+// Función para formatear fechas en formato DD/MM/YYYY hh:mm:ss AM/PM
+const formatDateTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  
+  let hours = date.getHours();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours || 12; // La hora '0' debe ser '12'
+  
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds} ${ampm}`;
+};
+
 const Events: React.FC = () => {
   const [crimes, setCrimes] = useState<Crime[]>([]);
   const [modalImages, setModalImages] = useState<CrimeImage[]>([]);
@@ -309,12 +328,9 @@ const drawBoxes = (
   ];
 
   return (
-    <div className="min-h-screen bg-gray-800 text-gray-300">
+    <div className="min-h-screen text-gray-300">
     <Navbar />  {/* aquí bg-gray-900 para destacar */}
     <main className="p-6 space-y-6">
-      <h1 className="text-2xl text-white">Registro de Eventos</h1>
-  
-      {/* Filtros */}
 <div className="bg-gray-700 p-4 rounded-lg shadow">
   <div className="grid 
                   grid-cols-1 
@@ -422,8 +438,9 @@ const drawBoxes = (
         ) : (
           <>
           <table className="min-w-full">
-            <thead className="bg-green-600 sticky top-0">
+            <thead className="bg-[var(--color-primary)] sticky top-0">
               <tr>
+                <th className="p-3 text-white">N°</th>
                 <th className="p-3 text-white">Cámara</th>
                 <th className="p-3 text-white">Descripción</th>
                 <th className="p-3 text-white">Fecha y hora</th>
@@ -432,12 +449,13 @@ const drawBoxes = (
               </tr>
             </thead>
             <tbody>
-              {crimes.map(i => (
+              {crimes.map((i, idx) => (
                 <tr key={i.id} className="border-b border-gray-700 hover:bg-gray-700">
-                  <td className="p-2 text-center">{i.camera.name}</td>
-                  <td className="p-2 text-center max-w-64">{i.description || 'Sin descripción'}</td>
-                  <td className="p-2 text-center">{new Date(i.created_at).toLocaleString()}</td>
-                  <td className="p-2 w-40 text-center">
+                  <td className="text-center">{(page - 1) * pageSize + idx + 1}</td>
+                  <td className="text-center">{i.camera.name}</td>
+                  <td className="text-center max-w-64">{i.description || 'Sin descripción'}</td>
+                  <td className="text-center">{formatDateTime(i.created_at)}</td>
+                  <td className="w-40 text-center">
                     <span className="px-2 py-1 bg-gray-600 rounded text-gray-100 text-sm">
                       {statuses.find(s => s.id === i.status_id)?.name || ''}
                     </span>
@@ -448,14 +466,12 @@ const drawBoxes = (
                         type="button"
                         text="👁 Ver"
                         variant="secondary"
-                        className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded border border-blue-400"
                         onClick={() => openModal(String(i.id))}
                       />
                       <Button
                         type="button"
                         text="✏️ Editar"
                         variant="secondary"
-                        className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded border border-blue-400"
                         onClick={() => openEditModal(String(i.id))}
                       />
                     </div>
@@ -465,7 +481,7 @@ const drawBoxes = (
             </tbody>
           </table>
           <div className="flex justify-center items-center space-x-3 mt-4">
-            <Button type="button" text="‹" variant="success" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1} />
+            <Button type="button" text="‹" variant="primary" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1} />
             {paginationRange.map((item, idx) => (
               typeof item === 'string' ? (
                 <span key={idx} className="px-2 text-gray-300">…</span>
@@ -479,7 +495,7 @@ const drawBoxes = (
                 />
               )
             ))}
-            <Button type="button" text="›" variant="success" onClick={() => setPage(p => Math.min(p + 1, Math.ceil(totalCount / pageSize)))} disabled={page * pageSize >= totalCount} />
+            <Button type="button" text="›" variant="primary" onClick={() => setPage(p => Math.min(p + 1, Math.ceil(totalCount / pageSize)))} disabled={page * pageSize >= totalCount} />
           </div>
           </>
         )}
@@ -627,7 +643,7 @@ const drawBoxes = (
           </div>
         )}
         {isEditModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-start z-50 overflow-y-auto py-10" onClick={(e) => {
+          <div className="fixed inset-0 bg-gray-700/60 flex justify-center items-start z-50 overflow-y-auto py-10" onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsEditModalOpen(false);
             }
@@ -646,7 +662,9 @@ const drawBoxes = (
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Fecha y hora</label>
-                  <span className="block mt-1 text-gray-100">{selectedCrimeDetail ? new Date(selectedCrimeDetail.created_at).toLocaleString() : ''}</span>
+                  <span className="block mt-1 text-gray-100">
+                    {selectedCrimeDetail ? formatDateTime(selectedCrimeDetail.created_at) : ''}
+                  </span>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Estado</label>

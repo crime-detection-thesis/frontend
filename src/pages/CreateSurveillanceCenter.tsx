@@ -15,7 +15,7 @@ const LIBRARIES = ['marker'] as const;
 const MAP_OPTIONS: google.maps.MapOptions = {
     mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
 };
-const containerStyle = { width: '100%', height: '400px' };
+const containerStyle = { width: '100%', height: '400px', borderRadius: '0.5rem' };
 const initialCenter = { lat: -12.046374, lng: -77.042793 };
 
 export default function CreateSurveillanceCenter() {
@@ -120,7 +120,7 @@ export default function CreateSurveillanceCenter() {
                   <input
                     id="name"
                     type="text"
-                    className="w-full border rounded p-2"
+                    className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
@@ -141,7 +141,7 @@ export default function CreateSurveillanceCenter() {
                     onClick={handleMapClick}
                   />
                   {markerPos && (
-                    <p className="mt-2">
+                    <p className="mt-2 text-sm text-gray-400">
                         Lat: {markerPos.lat.toFixed(6)}, Lng: {markerPos.lng.toFixed(6)}
                     </p>
                   )}
@@ -152,13 +152,13 @@ export default function CreateSurveillanceCenter() {
                   <Button
                     type="button"
                     text="Volver"
-                    className="bg-gray-500 hover:bg-gray-600"
+                    variant="secondary"
                     onClick={() => navigate('/select-surveillance-center')}
                   />
                   <Button
                     type="submit"
                     text="Crear y registrar"
-                    className="bg-blue-500 hover:bg-blue-600"
+                    variant="primary"
                   />
               </div>
           </form>

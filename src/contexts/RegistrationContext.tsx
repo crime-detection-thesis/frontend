@@ -6,13 +6,15 @@ type PendingUser = { email: string; username: string; password: string };
 
 const RegistrationContext = createContext<{
   pending?: PendingUser;
-  setPending: (p: PendingUser) => void;
-}>({ pending: undefined, setPending: () => {} });
+  setPending: (p: PendingUser | undefined) => void;
+}>({ 
+  pending: undefined, 
+  setPending: () => {}
+});
 
-export const RegistrationProvider: React.FC<{ children: ReactNode }> = ({
-                                                                          children,
-                                                                        }) => {
-  const [pending, setPending] = useState<PendingUser>();
+export const RegistrationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [pending, setPending] = useState<PendingUser | undefined>(undefined);
+
   return (
     <RegistrationContext.Provider value={{ pending, setPending }}>
       {children}

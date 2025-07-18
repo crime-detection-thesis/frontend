@@ -1,4 +1,3 @@
-// src/contexts/AuthContext.tsx
 import {
   createContext,
   useContext,
@@ -6,11 +5,10 @@ import {
   useEffect,
 } from 'react';
 import type { ReactNode } from 'react';
-import { setTokens, clearTokens } from '../api/tokenService';
-import { scheduleTokenRefresh } from '../api/scheduleRefresh';
-import type { RegisterData } from '../interfaces/auth.interface';
-import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
+import apiClient from '../api/apiInstance';
+import { setTokens, clearTokens } from '../api/tokenService';
+import type { RegisterData } from '../interfaces/auth.interface';
 import { useNavigate } from 'react-router-dom';
 import type { Camera } from '../interfaces/camera.interface';
 
@@ -18,6 +16,7 @@ interface AuthContextType {
   userId: number;
   userName: string | null;
   cameras: Camera[];
+  isAdmin: boolean;
   setCameras: (cameras: Camera[]) => void;
   surveillanceCenterId: number;
   login: (email: string, password: string) => Promise<void>;
@@ -33,96 +32,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userId, setUserId] = useState<number | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [cameras, setCameras] = useState<Camera[]>([]);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [surveillanceCenterId, setSurveillanceCenterId] = useState<number | null>(null);
   const navigate = useNavigate();
-
-  const apiClient = axios.create({ baseURL:  `${import.meta.env.VITE_API_URL}/api` });
-  apiClient.defaults.withCredentials = true;
-
-  apiClient.interceptors.request.use(cfg => {
-    if (accessToken && cfg.headers) {
-      cfg.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    return cfg;
-  });
-
-  let isRefreshing = false;
-  let failedQueue: Array<{
-    resolve: (token: string) => void;
-    reject: (err: unknown) => void;
-  }> = [];
-  const processQueue = (err: unknown, token: string | null = null) => {
-    failedQueue.forEach(p => {
-      if (err) {
-        p.reject(err);
-      } else {
-        p.resolve(token!);
-      }
-    });
-    failedQueue = [];
-  };
-
-  apiClient.interceptors.response.use(
-    res => res,
-    (error: AxiosError) => {
-      const originalRequest = error.config!;
-      if (error.response?.status === 401 && !originalRequest._retry) {
-        originalRequest._retry = true;
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
-          }).then(token => {
-            originalRequest.headers!['Authorization'] = `Bearer ${token}`;
-            return apiClient(originalRequest);
-          });
-        }
-
-        isRefreshing = true;
-        return new Promise((resolve, reject) => {
-          apiClient.post('/user/token/refresh/', {})
-            .then(({ data }) => {
-              setAccessToken(data.access);
-  setTokens(data);
-  scheduleTokenRefresh();
-
-              const payload = decodeJWT(data.access);
-              setUserId(typeof payload?.user_id === 'number' ? payload.user_id : 0);
-              setUserName(typeof payload?.username === 'string' ? payload.username : '');
-              setSurveillanceCenterId(typeof payload?.surveillance_center === 'number' ? payload.surveillance_center : 0);
-
-              processQueue(null, data.access);
-              originalRequest.headers!['Authorization'] = `Bearer ${data.access}`;
-              resolve(apiClient(originalRequest));
-            })
-            .catch(err => {
-              processQueue(err, null);
-              logout();
-              reject(err);
-            })
-            .finally(() => {
-              isRefreshing = false;
-            });
-        });
-      }
-      return Promise.reject(error);
-    }
-  );
 
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await apiClient.post('/user/token/refresh/', {});
+        const { data } = await apiClient.post('/user/token/refresh/');
         setAccessToken(data.access);
-  setTokens(data);
-  scheduleTokenRefresh();
+        setTokens(data);
+
         const payload = decodeJWT(data.access);
-        console.log(payload);
         setUserId(typeof payload?.user_id === 'number' ? payload.user_id : 0);
         setUserName(typeof payload?.username === 'string' ? payload.username : '');
-        setSurveillanceCenterId(typeof payload?.surveillance_center === 'number' ? payload.surveillance_center : 0);
-      } catch {
+        setSurveillanceCenterId(
+          typeof payload?.surveillance_center === 'number'
+            ? payload.surveillance_center
+            : 0
+        );
+        setIsAdmin(typeof payload?.is_admin === 'boolean' ? payload.is_admin : false);
+      } catch (error) {
+        console.error('Error al refrescar el token:', error);
+        clearTokens();
         setAccessToken(null);
-        setUserName('');
+        setUserName(null);
       }
     })();
   }, []);
@@ -130,14 +64,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     const { data } = await apiClient.post('/user/login/', { email, password });
     setAccessToken(data.access);
-  setTokens(data);
-  scheduleTokenRefresh();
+    setTokens(data);
 
     const payload = decodeJWT(data.access);
-    console.log(payload);
     setUserId(typeof payload?.user_id === 'number' ? payload.user_id : 0);
     setUserName(typeof payload?.username === 'string' ? payload.username : '');
-    setSurveillanceCenterId(typeof payload?.surveillance_center === 'number' ? payload.surveillance_center : 0);
+    setSurveillanceCenterId(
+      typeof payload?.surveillance_center === 'number'
+        ? payload.surveillance_center
+        : 0
+    );
+    setIsAdmin(typeof payload?.is_admin === 'boolean' ? payload.is_admin : false);
 
     navigate('/dashboard');
   };
@@ -145,12 +82,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       await apiClient.post('/user/logout/', {});
-    } catch {
-      /* ignore */
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
     } finally {
       clearTokens();
       setAccessToken(null);
-      setUserName('');
+      setUserName(null);
       navigate('/login');
     }
   };
@@ -158,26 +95,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (payload: RegisterData) => {
     try {
       await apiClient.post('/user/register/', payload);
-      // Después de registrar, hacer login automáticamente
       await login(payload.email, payload.password);
     } catch (error) {
       console.error('Error durante el registro:', error);
-      throw error; // Re-lanzar el error para que pueda ser manejado por el componente que llama
+      throw error;
     }
   };
 
   return (
     <AuthContext.Provider
-      value={{ 
+      value={{
         userId: userId ?? 0,
-        userName, 
-        login, 
-        logout, 
-        register, 
-        apiClient, 
-        cameras, 
+        userName,
+        login,
+        logout,
+        register,
+        apiClient,
+        cameras,
         setCameras,
-        surveillanceCenterId: surveillanceCenterId ?? 0
+        isAdmin,
+        surveillanceCenterId: surveillanceCenterId ?? 0,
       }}
     >
       {children}

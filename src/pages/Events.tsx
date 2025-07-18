@@ -15,8 +15,12 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { getCrimes, getCrimeDetail, updateCrimeStatus, type GetCrimesParams, type PaginatedResponse } from '../api/crime';
 import type { Crime } from '../interfaces/crime.interface';
+import { getUsersByCenter, type User } from '../api/user';
+import { useAuth } from '../contexts/AuthContext';
+import StyledSelect from '../components/StyledSelect';
 
-// Función para formatear fechas en formato DD/MM/YYYY hh:mm:ss AM/PM
+interface RSOption { value: number; label: string; }
+
 const formatDateTime = (dateString: string): string => {
   const date = new Date(dateString);
   
@@ -27,7 +31,7 @@ const formatDateTime = (dateString: string): string => {
   let hours = date.getHours();
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12;
-  hours = hours || 12; // La hora '0' debe ser '12'
+  hours = hours || 12;
   
   const minutes = String(date.getMinutes()).padStart(2, '0');
   const seconds = String(date.getSeconds()).padStart(2, '0');
@@ -57,25 +61,25 @@ const Events: React.FC = () => {
     endDate: '',
     statusId: '' 
   });
-  // Estado para rastrear qué imágenes deben mostrar las cajas
   const [imagesWithBoxes, setImagesWithBoxes] = useState<Record<string, boolean>>({});
-  // justo al inicio de tu componente Events:
   const canvasRefs = useRef<Record<string, HTMLCanvasElement>>({});
   const [pendingStatuses, setPendingStatuses] = useState<Record<string, { status_id: number; description: string }>>({});
 
-  // Estados y funciones para el modal de edición de eventos
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [selectedCrimeDetail, setSelectedCrimeDetail] = useState<Crime | null>(null);
   const [editForm, setEditForm] = useState<{ statusId: string; description: string }>({ statusId: '', description: '' });
   const [currentCrimeId, setCurrentCrimeId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const pageSize = 10;  // igual que en tu PAGE_SIZE de DRF
+  const pageSize = 10;
 
-  // Lógica de paginación truncada
   const totalPages = Math.ceil(totalCount / pageSize);
   const siblingCount = 2;
   const paginationRange: (number | string)[] = [];
+  const [users, setUsers]               = useState<RSOption[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<RSOption[]>([]);
+  const { surveillanceCenterId, isAdmin } = useAuth();
+
   if (totalPages > 0) {
     paginationRange.push(1);
     if (page - siblingCount > 2) paginationRange.push('…');
@@ -109,8 +113,6 @@ const Events: React.FC = () => {
     setIsEditModalOpen(false);
   };
 
-  
-  // Función para alternar la visibilidad de las cajas de una imagen específica
   const toggleBoxes = (imageId: string) => {
     setImagesWithBoxes(prev => ({
       ...prev,
@@ -126,17 +128,14 @@ const drawBoxes = (
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
   
-    // 1) Tamaños
     const dispW = canvas.width;
     const dispH = canvas.height;
     const natW  = image.naturalWidth;
     const natH  = image.naturalHeight;
   
-    // 2) Limpiar
     ctx.clearRect(0, 0, dispW, dispH);
     ctx.imageSmoothingEnabled = false;
   
-    // 3) Calcular letter-box
     const imgRatio       = natW / natH;
     const canvasRatio    = dispW / dispH;
     let drawW: number,
@@ -158,7 +157,6 @@ const drawBoxes = (
       offsetY = 0;
     }
   
-    // 4) Dibujar cada caja, escalando sólo sobre drawW×drawH y desplazando por offset
     detections.forEach(b => {
       const scaleX = drawW / natW;
       const scaleY = drawH / natH;
@@ -168,28 +166,23 @@ const drawBoxes = (
       const w = (b.box[2] - b.box[0]) * scaleX;
       const h = (b.box[3] - b.box[1]) * scaleY;
   
-      // Fondo blanco grueso
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.lineWidth   = 8;
       ctx.strokeRect(x, y, w, h);
   
-      // Borde exterior negro
       ctx.strokeStyle = '#000000';
       ctx.lineWidth   = 6;
       ctx.strokeRect(x, y, w, h);
   
-      // Borde principal brillante
       ctx.strokeStyle = '#00FF00';
       ctx.lineWidth   = 3;
       ctx.strokeRect(x, y, w, h);
   
-      // Relleno semitransparente
       ctx.fillStyle   = 'rgba(0, 255, 0, 0.1)';
       ctx.fillRect(x, y, w, h);
     });
   };
 
-  // Cargar datos iniciales
   useEffect(() => {
     getStatuses().then(statuses => {
       const foundConfirmedId = statuses.find(s => s.name === CONFIRMED_STATUS_NAME)?.id ?? 2;
@@ -200,14 +193,19 @@ const drawBoxes = (
       setStatuses(statuses);
     });
     getCameras().then(setCameras);
-  }, []);
+
+    if (isAdmin && surveillanceCenterId > 0) {
+      getUsersByCenter(surveillanceCenterId)
+        .then(list => setUsers(list.map(u => ({ value: u.id, label: u.username }))))
+        .catch(console.error);
+    }
+  }, [isAdmin, surveillanceCenterId]);
 
   useEffect(() => {
     console.log('confirmedStatusId', confirmedStatusId);
     console.log('falsePositiveStatusId', falsePositiveStatusId);
   }, [confirmedStatusId, falsePositiveStatusId]);
 
-  // Cargar crímenes cuando se apliquen los filtros
   useEffect(() => {
     setLoading(true);
     getCrimes({
@@ -215,6 +213,7 @@ const drawBoxes = (
       startDate: appliedFilters.startDate,
       endDate: appliedFilters.endDate,
       statusId: appliedFilters.statusId,
+      user_id: appliedFilters.user_id,
       page,
       page_size: pageSize
     })
@@ -229,15 +228,16 @@ const drawBoxes = (
       .finally(() => setLoading(false));
   }, [appliedFilters, page]);
 
-  // Función para aplicar los filtros
   const applyFilters = () => {
-    // Asegurarse de que las fechas estén en el formato correcto
     const formattedFilters: GetCrimesParams = {
       ...filters,
       startDate: filters.startDate || undefined,
       endDate: filters.endDate || undefined,
       cameraId: filters.cameraId || undefined,
-      statusId: filters.statusId || undefined
+      statusId: filters.statusId || undefined,
+      ...(isAdmin && selectedUsers.length > 0
+        ? { user_id: selectedUsers.map(o => o.value) }
+        : {}),
     };
     setAppliedFilters(formattedFilters);
     setPage(1);
@@ -282,16 +282,13 @@ const drawBoxes = (
       const detail = await getCrimeImageDetail(id);
       setCurrentCrimeId(Number(id));
       console.log('Detalle de la imagen:', detail);
-      // Si es necesario, convertir la respuesta a un array
       const images = Array.isArray(detail) ? detail : [detail];
       setModalImages(images);
-      // Inicializar el estado de visibilidad de cajas para cada imagen
       const initialBoxesState = images.reduce((acc, img) => ({
         ...acc,
         [img.id]: false
       }), {});
       setImagesWithBoxes(initialBoxesState);
-      // Inicializar pendingStatuses a partir de modalImages
       const initialPending: Record<string, { status_id: number; description: string }> = images.reduce((acc, img) => ({
         ...acc,
         [img.id]: { status_id: img.status_id, description: img.description }
@@ -299,11 +296,9 @@ const drawBoxes = (
       setPendingStatuses(initialPending);
     } catch (error) {
       console.error('Error al cargar el detalle de la imagen:', error);
-      // Opcional: Mostrar un mensaje de error al usuario
     }
   };
 
-  // Efecto para inicializar el estado cuando se cargan las imágenes
   useEffect(() => {
     if (modalImages.length > 0) {
       const initialBoxesState = modalImages.reduce((acc, img) => ({
@@ -329,7 +324,7 @@ const drawBoxes = (
 
   return (
     <div className="min-h-screen text-gray-300">
-    <Navbar />  {/* aquí bg-gray-900 para destacar */}
+    <Navbar />
     <main className="p-6 space-y-6">
 <div className="bg-gray-700 p-4 rounded-lg shadow">
   <div className="grid 
@@ -339,7 +334,6 @@ const drawBoxes = (
                   lg:grid-cols-5 
                   gap-4 
                   items-end">
-    {/* Cámara */}
     <div>
       <label className="block text-sm font-medium text-gray-300 mb-1">
         Cámara
@@ -353,7 +347,6 @@ const drawBoxes = (
       />
     </div>
 
-    {/* Fecha Inicio */}
     <div>
       <label className="block text-sm font-medium text-gray-300 mb-1">
         Fecha Inicio
@@ -363,7 +356,6 @@ const drawBoxes = (
         selected={filters.startDate ? new Date(filters.startDate + 'T00:00:00') : null}
         onChange={d => {
           if (!d) return;
-          // Crear fecha local sin ajuste de zona horaria
           const localDate = new Date(d);
           const year = localDate.getFullYear();
           const month = String(localDate.getMonth() + 1).padStart(2, '0');
@@ -376,7 +368,6 @@ const drawBoxes = (
       />
     </div>
 
-    {/* Fecha Fin */}
     <div>
       <label className="block text-sm font-medium text-gray-300 mb-1">
         Fecha Fin
@@ -386,7 +377,6 @@ const drawBoxes = (
         selected={filters.endDate ? new Date(filters.endDate + 'T00:00:00') : null}
         onChange={d => {
           if (!d) return;
-          // Crear fecha local sin ajuste de zona horaria
           const localDate = new Date(d);
           const year = localDate.getFullYear();
           const month = String(localDate.getMonth() + 1).padStart(2, '0');
@@ -399,7 +389,6 @@ const drawBoxes = (
       />
     </div>
 
-    {/* Estado */}
     <div>
       <label className="block text-sm font-medium text-gray-300 mb-1">
         Estado
@@ -413,7 +402,20 @@ const drawBoxes = (
       />
     </div>
 
-    {/* Botón Filtrar: ocupa todo el ancho hasta lg, luego sólo su celda */}
+    {isAdmin && (
+    <div>
+      <label className="block text-sm font-medium text-gray-300 mb-1">
+        Usuario
+      </label>
+      <StyledSelect
+                options={users}
+                value={selectedUsers}
+                onChange={(value) => setSelectedUsers(value as RSOption[])}
+                placeholder="Filtrar por usuario…"
+              />
+    </div>
+    )}
+    
     <div className="col-span-full lg:col-span-1">
       <Button
         type="button"
@@ -426,7 +428,6 @@ const drawBoxes = (
   </div>
 </div>
   
-      {/* tabla */}
       <div className="overflow-x-auto bg-gray-700 rounded-lg shadow">
         {loading ? (
           <Loader className="p-8 h-56 w-full" message="Cargando eventos..." />
@@ -501,10 +502,8 @@ const drawBoxes = (
         )}
         </div>
 
-        {/* modal */}
         {modalImages.length > 0 && (
           <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-start z-50 overflow-y-auto py-10" onClick={(e) => {
-            // Cerrar el modal si se hace clic fuera del contenido
             if (e.target === e.currentTarget) {
               setModalImages([]);
             }
@@ -517,11 +516,7 @@ const drawBoxes = (
                 ×
               </button>
               
-              {/* Título del modal */}
               <h2 className="text-xl font-bold text-white mb-6">Imágenes de la detección</h2>
-                  
-              
-              {/* Lista de imágenes */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {modalImages.map((img, imgIndex) => (
                   <div key={imgIndex} className="bg-gray-700 p-4 rounded-lg">
@@ -536,20 +531,15 @@ const drawBoxes = (
                                 const imgEl = e.currentTarget as HTMLImageElement;
                                 const canvas = canvasRefs.current[img.id];
                                 if (!canvas || !img.detections?.length) return;
-
-                                // 1) Medir tamaño que ocupa la imagen en pantalla
-                              //   const { width: dispW, height: dispH } = imgEl.getBoundingClientRect();
                               const rect = imgEl.getBoundingClientRect();
                               const dispW = Math.round(rect.width);
                               const dispH = Math.round(rect.height);
 
-                                // 2) Ajustar canvas (CSS y sistema de coordenadas internas)
                                 canvas.style.width  = `${dispW}px`;
                                 canvas.style.height = `${dispH}px`;
                                 canvas.width  = dispW;
                                 canvas.height = dispH;
 
-                                // 3) Dibujar cajas
                                 drawBoxes(canvas, imgEl, img.detections);
                               }}
                             />

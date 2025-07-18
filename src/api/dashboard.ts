@@ -1,4 +1,5 @@
-import { apiClient } from './apiInstance';
+import apiClient from './apiInstance';
+import { serializeUserIds } from './user';
 
 export interface Metrics {
   total_cameras: number;
@@ -13,18 +14,36 @@ export interface Point { date: string; count: number; }
 export interface StateSlice { state: string; count: number; }
 export interface CameraSlice { camera: string; count: number; }
 
-export function getMetrics(surveillance_center_id: number): Promise<Metrics> {
-  return apiClient.get(`/crime/dashboard/metrics/?surveillance_center_id=${surveillance_center_id}`).then(r => r.data);
+export function getMetrics(
+  userIds: number[] = []
+): Promise<Metrics> {
+  const qs = serializeUserIds(userIds, '?');
+  return apiClient.get<Metrics>(`/crime/dashboard/metrics/${qs}`)
+                  .then(r => r.data);
 }
 
-export function getEventsOverTime(surveillance_center_id: number, days = 7): Promise<Point[]> {
-  return apiClient.get(`/crime/dashboard/events-over-time/?surveillance_center_id=${surveillance_center_id}&days=${days}`).then(r => r.data);
+export function getEventsOverTime(
+  days = 7,
+  userIds: number[] = []
+): Promise<Point[]> {
+  const qs = `?days=${days}` + serializeUserIds(userIds, '&');
+  return apiClient.get<Point[]>(`/crime/dashboard/events-over-time/${qs}`)
+                  .then(r => r.data);
 }
 
-export function getEventsByState(surveillance_center_id: number): Promise<StateSlice[]> {
-  return apiClient.get(`/crime/dashboard/events-by-state/?surveillance_center_id=${surveillance_center_id}`).then(r => r.data);
+export function getEventsByState(
+  userIds: number[] = []
+): Promise<StateSlice[]> {
+  const qs = serializeUserIds(userIds, '?');
+  return apiClient.get<StateSlice[]>(`/crime/dashboard/events-by-state/${qs}`)
+                  .then(r => r.data);
 }
 
-export function getEventsByCamera(surveillance_center_id: number, top = 10): Promise<CameraSlice[]> {
-  return apiClient.get(`/crime/dashboard/events-by-camera/?surveillance_center_id=${surveillance_center_id}&top=${top}`).then(r => r.data);
+export function getEventsByCamera(
+  top = 10,
+  userIds: number[] = []
+): Promise<CameraSlice[]> {
+  const qs = `?top=${top}` + serializeUserIds(userIds, '&');
+  return apiClient.get<CameraSlice[]>(`/crime/dashboard/events-by-camera/${qs}`)
+                  .then(r => r.data);
 }

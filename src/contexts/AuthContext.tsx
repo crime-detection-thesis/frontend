@@ -7,7 +7,7 @@ import {
 import type { ReactNode } from 'react';
 import type { AxiosInstance } from 'axios';
 import apiClient from '../api/apiInstance';
-import { setTokens, clearTokens } from '../api/tokenService';
+import { setTokens, clearTokens, getAccessToken, type JWTPayload } from '../api/tokenService';
 import type { RegisterData } from '../interfaces/auth.interface';
 import { useNavigate } from 'react-router-dom';
 import type { Camera } from '../interfaces/camera.interface';
@@ -25,6 +25,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   apiClient: AxiosInstance;
+  refreshCurrentUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -39,6 +40,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
+const refreshCurrentUser = async () => {
+    try {
+      const { data } = await apiClient.post<{ access: string; refresh?: string }>('/user/token/refresh/');
+      setTokens(data);
+
+      const payload = decodeJWT(data.access) || {};
+      setUserId(typeof payload.user_id === 'number' ? payload.user_id : null);
+      setUserName(typeof payload.username === 'string' ? payload.username : null);
+      setSurveillanceCenterId(
+        typeof payload.surveillance_center === 'number'
+          ? payload.surveillance_center
+          : null
+      );
+      setIsAdmin(typeof payload.is_admin === 'boolean' ? payload.is_admin : false);
+    } catch (error) {
+      console.error('Error al refrescar usuario tras registro:', error);
+    }
+  };
+
   const clearAuth = () => {
     clearTokens();
     setAccessToken(null);
@@ -51,27 +71,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     (async () => {
-      try {
-        const { data } = await apiClient.post('/user/token/refresh/');
-        setAccessToken(data.access);
-        setTokens(data);
-
-        const payload = decodeJWT(data.access);
-        setUserId(typeof payload?.user_id === 'number' ? payload.user_id : 0);
-        setUserName(typeof payload?.username === 'string' ? payload.username : '');
-        setSurveillanceCenterId(
-          typeof payload?.surveillance_center === 'number'
-            ? payload.surveillance_center
-            : 0
-        );
-        setIsAdmin(typeof payload?.is_admin === 'boolean' ? payload.is_admin : false);
-      } catch (error) {
-        console.error('Error al refrescar el token:', error);
-        clearAuth();
-        navigate('/login', { replace: true });
-      } finally {
-        setIsInitializing(false);
+      const token = getAccessToken();
+      if (token) {
+        const payload = decodeJWT(token);
+        setUserId(payload?.user_id ?? null);
+        setUserName(payload?.username ?? null);
+        setSurveillanceCenterId(payload?.surveillance_center ?? null);
+        setIsAdmin(payload?.is_admin ?? false);
+      } else {
+        await refreshCurrentUser();
       }
+      setIsInitializing(false);
     })();
   }, []);
 
@@ -96,7 +106,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
     setIsAdmin(typeof payload?.is_admin === 'boolean' ? payload.is_admin : false);
 
-    navigate('/dashboard', { replace: true });
+    if (payload?.surveillance_center) {
+      navigate('/dashboard', { replace: true });
+    } else {
+      navigate('/select-surveillance-center', { replace: true });
+    }
   };
 
   const logout = async () => {
@@ -135,6 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAdmin,
         surveillanceCenterId: surveillanceCenterId ?? 0,
         isInitializing,
+        refreshCurrentUser,
       }}
     >
       {children}
@@ -148,7 +163,7 @@ export const useAuth = (): AuthContextType => {
   return ctx;
 };
 
-function decodeJWT(token: string): Record<string, unknown> | null {
+function decodeJWT(token: string): JWTPayload | null {
   try {
     const payload = token.split('.')[1];
     const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));

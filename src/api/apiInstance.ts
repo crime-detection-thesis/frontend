@@ -16,7 +16,6 @@ const SKIP_URLS = [
   '/user/login/',
   '/user/register/',
   '/user/token/refresh/',
-  '/user/logout/'
 ];
 
 const apiClient = axios.create({
@@ -29,6 +28,7 @@ apiClient.interceptors.request.use(cfg => {
   if (token && cfg.headers) {
     cfg.headers.Authorization = `Bearer ${token}`;
   }
+
   return cfg;
 });
 

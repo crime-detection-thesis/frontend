@@ -5,7 +5,7 @@ export interface RegisterData {
     email: string;
     username: string;
     password: string;
-    surveillance_center_id: number;
+    surveillance_center_id?: number;
 }
 
 export interface TokenResponse {
@@ -28,6 +28,9 @@ export const loginUser = async (
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.access}`;
     return data;
 };
+
+export const completeRegistration = (surveillance_center_id: number) =>
+  apiClient.post('/user/register/complete/', { surveillance_center_id });
 
 export const logoutUser = async () => {
     await apiClient.post('/user/logout/');

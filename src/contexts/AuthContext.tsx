@@ -11,6 +11,7 @@ import { setTokens, clearTokens } from '../api/tokenService';
 import type { RegisterData } from '../interfaces/auth.interface';
 import { useNavigate } from 'react-router-dom';
 import type { Camera } from '../interfaces/camera.interface';
+import Loader from '../components/Loader';
 
 interface AuthContextType {
   userId: number;
@@ -19,6 +20,7 @@ interface AuthContextType {
   isAdmin: boolean;
   setCameras: (cameras: Camera[]) => void;
   surveillanceCenterId: number;
+  isInitializing: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
@@ -35,6 +37,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [surveillanceCenterId, setSurveillanceCenterId] = useState<number | null>(null);
   const navigate = useNavigate();
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
+
+  const clearAuth = () => {
+    clearTokens();
+    setAccessToken(null);
+    setUserId(null);
+    setUserName(null);
+    setSurveillanceCenterId(null);
+    setIsAdmin(false);
+    setCameras([]);
+  };
 
   useEffect(() => {
     (async () => {
@@ -54,12 +67,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAdmin(typeof payload?.is_admin === 'boolean' ? payload.is_admin : false);
       } catch (error) {
         console.error('Error al refrescar el token:', error);
-        clearTokens();
-        setAccessToken(null);
-        setUserName(null);
+        clearAuth();
+        navigate('/login', { replace: true });
+      } finally {
+        setIsInitializing(false);
       }
     })();
   }, []);
+
+  if (isInitializing) {
+    return <div className="flex justify-center items-center h-screen">
+    <Loader />
+    </div>
+  }
 
   const login = async (email: string, password: string) => {
     const { data } = await apiClient.post('/user/login/', { email, password });
@@ -76,7 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
     setIsAdmin(typeof payload?.is_admin === 'boolean' ? payload.is_admin : false);
 
-    navigate('/dashboard');
+    navigate('/dashboard', { replace: true });
   };
 
   const logout = async () => {
@@ -85,10 +105,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     } finally {
-      clearTokens();
-      setAccessToken(null);
-      setUserName(null);
-      navigate('/login');
+      clearAuth();
+      navigate('/login', { replace: true });
     }
   };
 
@@ -98,6 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await login(payload.email, payload.password);
     } catch (error) {
       console.error('Error durante el registro:', error);
+      navigate('/register', { replace: true });
       throw error;
     }
   };
@@ -115,6 +134,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setCameras,
         isAdmin,
         surveillanceCenterId: surveillanceCenterId ?? 0,
+        isInitializing,
       }}
     >
       {children}

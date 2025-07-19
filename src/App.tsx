@@ -10,6 +10,7 @@ import Cameras from './pages/Cameras';
 import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
 import { PrivateRoute } from './components/PrivateRoute';
+import { NoCenterRoute } from './components/NoCenterRoute';
 
 const App: React.FC = () => {
   const { userId, isInitializing } = useAuth();
@@ -29,8 +30,8 @@ const App: React.FC = () => {
 
       <Route path="/login"    element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/select-surveillance-center" element={<SelectSurveillanceCenter />} />
-      <Route path="/create-surveillance-center" element={<CreateSurveillanceCenter />} /> 
+      <Route path="/select-surveillance-center" element={<NoCenterRoute><SelectSurveillanceCenter /></NoCenterRoute>} />
+      <Route path="/create-surveillance-center" element={<NoCenterRoute><CreateSurveillanceCenter /></NoCenterRoute>} /> 
 
       <Route
         path="/camaras"
@@ -56,6 +57,7 @@ const App: React.FC = () => {
           </PrivateRoute>
         }
       />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

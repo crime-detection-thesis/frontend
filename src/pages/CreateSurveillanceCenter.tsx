@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useRegistration } from '../contexts/RegistrationContext';
+
 import { useAuth } from '../contexts/AuthContext';
 import { createSurveillanceCenter } from '../api/surveillance';
+import { completeRegistration } from '../api/auth';
 import Button from '../components/Button';
 import FormContainer from '../components/FormContainer';
 import {
@@ -10,7 +11,6 @@ import {
     useLoadScript,
 } from '@react-google-maps/api';
 
-// ← Definiciones estáticas FUERA del componente
 const LIBRARIES = ['marker'] as const;
 const MAP_OPTIONS: google.maps.MapOptions = {
     mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
@@ -19,34 +19,28 @@ const containerStyle = { width: '100%', height: '400px', borderRadius: '0.5rem' 
 const initialCenter = { lat: -12.046374, lng: -77.042793 };
 
 export default function CreateSurveillanceCenter() {
-    const { pending } = useRegistration();
-    const { register } = useAuth();
+    const { refreshCurrentUser } = useAuth();
     const navigate = useNavigate();
 
     const [name, setName] = useState('');
     const [markerPos, setMarkerPos] = useState<google.maps.LatLngLiteral | null>(null);
 
-    // refs para mapa y marcador
     const mapRef = useRef<google.maps.Map | undefined>(undefined);
     const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
 
-    // carga la API de Google Maps, incluida la librería marker
     const { isLoaded, loadError } = useLoadScript({
         googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
         libraries: [...LIBRARIES], // Convert to mutable array
     });
 
-    // Cada vez que cambie markerPos, limpiamos el viejo y creamos el nuevo
     useEffect(() => {
         if (!mapRef.current) return;
 
-        // elimina marcador previo
         if (markerRef.current) {
             markerRef.current.map = null;
             markerRef.current = null;
         }
 
-        // crea uno nuevo si hay posición
         if (markerPos) {
             markerRef.current = new google.maps.marker.AdvancedMarkerElement({
                 map: mapRef.current,
@@ -55,11 +49,6 @@ export default function CreateSurveillanceCenter() {
             });
         }
     }, [markerPos, name]);
-
-    if (!pending) {
-        navigate('/register');
-        return null;
-    }
 
     const handleMapClick = (e: google.maps.MapMouseEvent) => {
         if (e.latLng) {
@@ -76,18 +65,14 @@ export default function CreateSurveillanceCenter() {
             return alert('Debe dar un nombre y seleccionar ubicación en el mapa.');
         }
         try {
-            // asegúrate de haber actualizado/migrado tu modelo para FloatField o DecimalField más ancho
             const { data: center } = await createSurveillanceCenter(
               name,
               markerPos.lat,
               markerPos.lng
             );
-            await register({
-                email: pending.email,
-                username: pending.username,
-                password: pending.password,
-                surveillance_center_id: center.id,
-            });
+            await completeRegistration(center.id);
+            await refreshCurrentUser();
+            navigate('/dashboard', { replace: true });
         } catch (err: unknown) {
             console.error(err);
             if (
@@ -112,7 +97,6 @@ export default function CreateSurveillanceCenter() {
     return (
       <FormContainer title="Crear Centro de Vigilancia">
           <form onSubmit={handleCreate}>
-              {/* Nombre */}
               <div className="mb-4">
                   <label htmlFor="name" className="block mb-1">
                       Nombre del Centro
@@ -127,7 +111,6 @@ export default function CreateSurveillanceCenter() {
                   />
               </div>
 
-              {/* Mapa */}
               <div className="mb-4">
                   <label className="block mb-1">
                       Selecciona ubicación (clic en el mapa):
@@ -147,7 +130,6 @@ export default function CreateSurveillanceCenter() {
                   )}
               </div>
 
-              {/* Botones */}
               <div className="flex space-x-2 mt-4">
                   <Button
                     type="button"
@@ -157,7 +139,7 @@ export default function CreateSurveillanceCenter() {
                   />
                   <Button
                     type="submit"
-                    text="Crear y registrar"
+                    text="Finalizar registro"
                     variant="primary"
                   />
               </div>

@@ -1,5 +1,5 @@
 // src/api/crime.ts
-import { apiClient } from './apiInstance';
+import apiClient from './apiInstance';
 import type { Crime } from '../interfaces/crime.interface';
 
 export interface GetCrimesParams {
@@ -7,12 +7,11 @@ export interface GetCrimesParams {
   startDate?: string;
   endDate?: string;
   statusId?: string;
-  // --- nuevos para paginación ---
+  user_id?: number[];
   page?: number;
   page_size?: number;
 }
 
-/** Forma estándar de respuesta paginada en DRF */
 export interface PaginatedResponse<T> {
   count: number;
   next: string | null;
@@ -20,10 +19,6 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
-/**
- * Obtiene crímenes, ahora paginados.
- * Devuelve { count, next, previous, results } en lugar de solo array.
- */
 export const getCrimes = async (
   params?: GetCrimesParams
 ): Promise<PaginatedResponse<Crime>> => {
@@ -34,10 +29,14 @@ export const getCrimes = async (
       paramsSerializer: (params) =>
         Object.entries(params)
           .filter(([_, v]) => v !== undefined && v !== '')
-          .map(
-            ([key, v]) =>
-              `${encodeURIComponent(key)}=${encodeURIComponent(v as string)}`
-          )
+          .flatMap(([key, v]) => {
+            if (Array.isArray(v)) {
+              return v.map(val =>
+                `${encodeURIComponent(key)}=${encodeURIComponent(String(val))}`
+              );
+            }
+            return `${encodeURIComponent(key)}=${encodeURIComponent(String(v))}`;
+          })
           .join('&'),
     }
   );

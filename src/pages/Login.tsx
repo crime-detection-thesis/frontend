@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import FormContainer from '../components/FormContainer';
@@ -8,7 +8,8 @@ import { useAuth } from '../contexts/AuthContext';
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const { login } = useAuth();
+    const { login, userId, isInitializing } = useAuth();
+    const navigate = useNavigate();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -19,6 +20,12 @@ const Login: React.FC = () => {
             alert('Login failed');
         }
     };
+
+    useEffect(() => {
+        if (!isInitializing && userId) {
+          navigate('/dashboard', { replace: true });
+        }
+      }, [isInitializing, userId, navigate]);
 
     return (
       <FormContainer title="Iniciar sesión">

@@ -1,5 +1,5 @@
 import { signalingInstance } from './signalingInstance';
-import { apiClient } from './apiInstance';
+import apiClient from './apiInstance';
 import type { CreateCamera } from '../interfaces/camera.interface';
 
 export const getCameras = async () => {

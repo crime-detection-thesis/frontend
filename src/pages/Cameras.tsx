@@ -6,16 +6,17 @@ import { connect, create, listActive, changeActive } from '../api/camera';
 import Navbar from '../components/Navbar';
 import type { Camera } from '../interfaces/camera.interface';
 import { useAuth } from '../contexts/AuthContext';
+import { useRef } from 'react';
 
 const Cameras: React.FC = () => {
   const { cameras, setCameras } = useAuth();
+  const camerasRef = useRef<Camera[]>([]);
   const { surveillanceCenterId } = useAuth();
   const { userId } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [showCameras, setShowCameras] = useState(false);
   const [lastAlerts, setLastAlerts] = useState<{ camera_name: string; timestamp: Date }[]>([]);
 
-  // 🚦 Toggle verdadero/falso, y si hay cámaras las conecta
   const toggleShowCameras = useCallback(() => {
     if (showCameras) {
       setShowCameras(false);
@@ -30,7 +31,6 @@ const Cameras: React.FC = () => {
     await connect(camera.id!, camera.rtsp_url);
     await changeActive(camera.id!, true);
 
-    // Actualizamos directamente con cameras
     const updated = [...cameras, camera];
     setCameras(updated);
     setShowCameras(true);
@@ -40,55 +40,54 @@ const Cameras: React.FC = () => {
   }
 };
 
-const handleAddCamera = async (name: string, url: string) => {
-  try {
-    const newCam: Camera = await create({
-      name,
-      rtsp_url: url,
-      surveillance_center: surveillanceCenterId
+  const handleAddCamera = async (name: string, url: string) => {
+    try {
+      const newCam: Camera = await create({
+        name,
+        rtsp_url: url,
+        surveillance_center: surveillanceCenterId
+      });
+      await connect(newCam.id!, newCam.rtsp_url);
+      await changeActive(newCam.id!, true);
+
+      const updated = [...cameras, newCam];
+      setCameras(updated);
+      setShowCameras(true);
+      setShowModal(false);
+    } catch {
+      alert('Error al crear la cámara');
+    }
+  };
+
+  const handleCloseCamera = useCallback(async (id: number) => {
+    await changeActive(id, false);
+    const filtered = cameras.filter(c => c.id !== id);
+    setCameras(filtered);
+
+    if (filtered.length === 0) {
+      setShowCameras(false);
+    }
+  }, [cameras]);
+
+  const handleDetection = useCallback((cameraId: number) => {
+    const cam = camerasRef.current.find(c => c.id === cameraId);
+    const name = cam?.name ?? `#${cameraId}`;
+
+    setLastAlerts(prev => [
+      ...prev,
+      { camera_name: name, timestamp: new Date() }
+    ]);
+  }, []);
+  
+
+  useEffect(() => {
+    listActive().then((list: Camera[] | undefined) => {
+      const active: Camera[] = list || [];
+      setCameras(active);
     });
-    await connect(newCam.id!, newCam.rtsp_url);
-    await changeActive(newCam.id!, true);
+  }, []);
 
-    const updated = [...cameras, newCam];
-    setCameras(updated);
-    setShowCameras(true);
-    setShowModal(false);
-  } catch {
-    alert('Error al crear la cámara');
-  }
-};
-
-const handleCloseCamera = useCallback(async (id: number) => {
-  await changeActive(id, false);
-  const filtered = cameras.filter(c => c.id !== id);
-  setCameras(filtered);
-
-  // Si ya no quedan, ocultamos la lista
-  if (filtered.length === 0) {
-    setShowCameras(false);
-  }
-}, [cameras]);
-
-const handleDetection = useCallback((cameraId: number) => {
-  const cam = cameras.find(c => c.id === cameraId);
-  const name = cam?.name ?? `#${cameraId}`;
-  setLastAlerts(prev => [...prev, { camera_name: name, timestamp: new Date() }]);
-}, [cameras]);
-
-useEffect(() => {
-  listActive().then((list: Camera[] | undefined) => {
-    const active: Camera[] = list || [];
-    setCameras(active);
-    // Ya no hacemos setShowCameras ni connect aquí:
-    // if (active.length > 0) {
-    //   setShowCameras(true);
-    //   active.forEach((cam: Camera) => connect(cam.id!, cam.rtsp_url));
-    // }
-  });
-}, []);
-
-
+  useEffect(() => { camerasRef.current = cameras; }, [cameras]);
 
   return (
     <div className="text-white min-h-screen flex flex-col">

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getAccessToken } from "./tokenService";
 
-const API_URL = `http://${import.meta.env.VITE_SIGNALING_URL}`;
+const API_URL = import.meta.env.VITE_HTTP_SIGNALING_URL;
 
 export const signalingInstance = axios.create({
     baseURL: API_URL,

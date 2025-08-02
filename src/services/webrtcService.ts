@@ -6,7 +6,7 @@ export const connectToWebSocket = (
   onDetection: (camera_id: number) => void,
 ) => {
   const ws = new WebSocket(
-    `ws://${import.meta.env.VITE_SIGNALING_URL}/ws/${id}`
+    `${import.meta.env.VITE_WS_SIGNALING_URL}/ws/${id}`
   );
 
   const pc = new RTCPeerConnection({

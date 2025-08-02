@@ -30,8 +30,6 @@ import {
   BarChart,
   Bar
 } from 'recharts';
-// al tope, junto a tus imports actuales:
-import ReactSelect from 'react-select';
 import { getUsersByCenter } from '../api/user';
 
 // adapta tu tipo Option (si quieres) para react‑select:

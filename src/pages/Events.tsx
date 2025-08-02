@@ -15,7 +15,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { getCrimes, getCrimeDetail, updateCrimeStatus, type GetCrimesParams, type PaginatedResponse } from '../api/crime';
 import type { Crime } from '../interfaces/crime.interface';
-import { getUsersByCenter, type User } from '../api/user';
+import { getUsersByCenter } from '../api/user';
 import { useAuth } from '../contexts/AuthContext';
 import StyledSelect from '../components/StyledSelect';
 

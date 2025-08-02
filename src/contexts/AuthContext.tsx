@@ -21,6 +21,8 @@ interface AuthContextType {
   setCameras: (cameras: Camera[]) => void;
   surveillanceCenterId: number;
   isInitializing: boolean;
+  videoGatewayUrl: string | null;
+  setVideoGatewayUrl: (url: string) => void;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
@@ -31,7 +33,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [, setAccessToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [cameras, setCameras] = useState<Camera[]>([]);
@@ -39,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [surveillanceCenterId, setSurveillanceCenterId] = useState<number | null>(null);
   const navigate = useNavigate();
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
+  const [videoGatewayUrl, setVideoGatewayUrl] = useState<string | null>(null);
 
 const refreshCurrentUser = async () => {
     try {
@@ -54,7 +57,7 @@ const refreshCurrentUser = async () => {
           : null
       );
       setIsAdmin(typeof payload.is_admin === 'boolean' ? payload.is_admin : false);
-    } catch (error) {
+      } catch (error) {
       console.error('Error al refrescar usuario tras registro:', error);
     }
   };
@@ -150,6 +153,8 @@ const refreshCurrentUser = async () => {
         surveillanceCenterId: surveillanceCenterId ?? 0,
         isInitializing,
         refreshCurrentUser,
+        videoGatewayUrl: videoGatewayUrl ?? '',
+        setVideoGatewayUrl
       }}
     >
       {children}

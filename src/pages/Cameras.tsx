@@ -7,38 +7,70 @@ import Navbar from '../components/Navbar';
 import type { Camera } from '../interfaces/camera.interface';
 import { useAuth } from '../contexts/AuthContext';
 import { useRef } from 'react';
+import { getVideoGatewayUrl } from '../api/surveillance';
 
 const Cameras: React.FC = () => {
   const { cameras, setCameras } = useAuth();
   const camerasRef = useRef<Camera[]>([]);
   const { surveillanceCenterId } = useAuth();
   const { userId } = useAuth();
+  const { videoGatewayUrl, setVideoGatewayUrl } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [showCameras, setShowCameras] = useState(false);
   const [lastAlerts, setLastAlerts] = useState<{ camera_name: string; timestamp: Date }[]>([]);
 
-  const toggleShowCameras = useCallback(() => {
+  // Utilidad para obtener el gateway URL y manejar errores
+  const fetchGatewayUrlOrAlert = async (): Promise<string | null> => {
+    try {
+      const { data } = await getVideoGatewayUrl(surveillanceCenterId!);
+      if (data.url) {
+        setVideoGatewayUrl(data.url);
+        return data.url;
+      } else {
+        console.error('No se pudo obtener la URL del gateway de video');
+        alert('No se pudo obtener la URL del gateway de video');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error al obtener la URL del gateway de video:', error);
+      alert('Error al obtener la URL del gateway de video');
+      return null;
+    }
+  };
+
+  const toggleShowCameras = useCallback(async () => {
     if (showCameras) {
       setShowCameras(false);
     } else if (cameras.length > 0) {
-      setShowCameras(true);
-      cameras.forEach(cam => connect(cam.id!, cam.rtsp_url));
+      let url = videoGatewayUrl;
+      if (!url) {
+        url = await fetchGatewayUrlOrAlert();
+      }
+      if (url) {
+        setShowCameras(true);
+        cameras.forEach(cam => connect(url!, cam.id!, cam.rtsp_url));
+      }
     }
-  }, [cameras, showCameras]);
+  }, [cameras, showCameras, videoGatewayUrl]);
 
   const handleSelectCamera = async (camera: Camera) => {
-  try {
-    await connect(camera.id!, camera.rtsp_url);
-    await changeActive(camera.id!, true);
-
-    const updated = [...cameras, camera];
-    setCameras(updated);
-    setShowCameras(true);
-  } catch (error) {
-    console.error('Error al conectar la cámara:', error);
-    alert('Error al conectar la cámara');
-  }
-};
+    try {
+      let url = videoGatewayUrl;
+      if (!url) {
+        url = await fetchGatewayUrlOrAlert();
+      }
+      if (url) {
+        await connect(url, camera.id!, camera.rtsp_url);
+        await changeActive(camera.id!, true);
+        const updated = [...cameras, camera];
+        setCameras(updated);
+        setShowCameras(true);
+      }
+    } catch (error) {
+      console.error('Error al conectar la cámara:', error);
+      alert('Error al conectar la cámara');
+    }
+  };
 
   const handleAddCamera = async (name: string, url: string) => {
     try {
@@ -47,14 +79,21 @@ const Cameras: React.FC = () => {
         rtsp_url: url,
         surveillance_center: surveillanceCenterId
       });
-      await connect(newCam.id!, newCam.rtsp_url);
-      await changeActive(newCam.id!, true);
 
-      const updated = [...cameras, newCam];
-      setCameras(updated);
-      setShowCameras(true);
-      setShowModal(false);
-    } catch {
+      let gatewayUrl = videoGatewayUrl;
+      if (!gatewayUrl) {
+        gatewayUrl = await fetchGatewayUrlOrAlert();
+      }
+      if (gatewayUrl) {
+        await connect(gatewayUrl, newCam.id!, newCam.rtsp_url);
+        await changeActive(newCam.id!, true);
+        const updated = [...cameras, newCam];
+        setCameras(updated);
+        setShowCameras(true);
+        setShowModal(false);
+      }
+    } catch (error) {
+      console.error('Error al crear la cámara:', error);
       alert('Error al crear la cámara');
     }
   };

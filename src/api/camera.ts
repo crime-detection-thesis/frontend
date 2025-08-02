@@ -46,9 +46,10 @@ export const create = async (camera: CreateCamera) => {
   }
 };
 
-export const connect = async (cameraId: number, rtspUrl: string) => {
+export const connect = async (videoGatewayUrl: string, cameraId: number, rtspUrl: string) => {
   try {
     const response = await signalingInstance.post('/start-camera', {
+      video_gateway_url: videoGatewayUrl,
       camera_id: cameraId,
       rtsp_url: rtspUrl
     });

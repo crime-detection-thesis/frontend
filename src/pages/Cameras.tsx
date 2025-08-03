@@ -19,7 +19,6 @@ const Cameras: React.FC = () => {
   const [showCameras, setShowCameras] = useState(false);
   const [lastAlerts, setLastAlerts] = useState<{ camera_name: string; timestamp: Date }[]>([]);
 
-  // Utilidad para obtener el gateway URL y manejar errores
   const fetchGatewayUrlOrAlert = async (): Promise<string | null> => {
     try {
       const { data } = await getVideoGatewayUrl(surveillanceCenterId!);
@@ -60,10 +59,11 @@ const Cameras: React.FC = () => {
         url = await fetchGatewayUrlOrAlert();
       }
       if (url) {
-        await connect(url, camera.id!, camera.rtsp_url);
-        await changeActive(camera.id!, true);
-        const updated = [...cameras, camera];
+        const exists = cameras.some(c => c.id === camera.id);
+        const updated = exists ? cameras : [...cameras, camera];
         setCameras(updated);
+        updated.forEach(cam => connect(url!, cam.id!, cam.rtsp_url));
+        await changeActive(camera.id!, true);
         setShowCameras(true);
       }
     } catch (error) {
@@ -85,10 +85,12 @@ const Cameras: React.FC = () => {
         gatewayUrl = await fetchGatewayUrlOrAlert();
       }
       if (gatewayUrl) {
-        await connect(gatewayUrl, newCam.id!, newCam.rtsp_url);
-        await changeActive(newCam.id!, true);
-        const updated = [...cameras, newCam];
+        const exists = cameras.some(c => c.id === newCam.id);
+        const updated = exists ? cameras : [...cameras, newCam];
         setCameras(updated);
+        updated.forEach(cam => connect(gatewayUrl!, cam.id!, cam.rtsp_url));
+        await changeActive(newCam.id!, true);
+
         setShowCameras(true);
         setShowModal(false);
       }

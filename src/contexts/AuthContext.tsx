@@ -70,6 +70,7 @@ const refreshCurrentUser = async () => {
     setSurveillanceCenterId(null);
     setIsAdmin(false);
     setCameras([]);
+    setVideoGatewayUrl(null);
   };
 
   useEffect(() => {

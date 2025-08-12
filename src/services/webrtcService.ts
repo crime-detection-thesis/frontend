@@ -1,6 +1,7 @@
 export const connectToWebSocket = (
   id: number,
   userId: number,
+  gatewayWsUrl: string,
   videoElement: HTMLVideoElement | null,
   onError: (msg: string) => void,
   onDetection: (camera_id: number) => void,
@@ -40,8 +41,8 @@ export const connectToWebSocket = (
       JSON.stringify({
         sdp: pc.localDescription?.sdp,
         type: pc.localDescription?.type,
-        camera_id: id,
         user_id: userId,
+        video_gateway_ws_url: gatewayWsUrl ? gatewayWsUrl.replace('http://', 'ws://') + `/ws/control/${id}` : ''
       })
     );
   };

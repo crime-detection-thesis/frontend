@@ -18,6 +18,7 @@ import type { Crime } from '../interfaces/crime.interface';
 import { getUsersByCenter } from '../api/user';
 import { useAuth } from '../contexts/AuthContext';
 import StyledSelect from '../components/StyledSelect';
+import PageTitle from '../components/PageTitle';
 
 interface RSOption { value: number; label: string; }
 
@@ -292,7 +293,7 @@ const drawBoxes = (
       const initialPending: Record<string, { status_id: number; description: string }> = images.reduce((acc, img) => ({
         ...acc,
         [img.id]: { status_id: img.status_id, description: img.description }
-      }), {} as Record<string, { status_id: number; description: string }>);
+      }), {} as Record<string, { status_id: number, description: string }>);
       setPendingStatuses(initialPending);
     } catch (error) {
       console.error('Error al cargar el detalle de la imagen:', error);
@@ -323,7 +324,9 @@ const drawBoxes = (
   ];
 
   return (
-    <div className="min-h-screen text-gray-300">
+    <>
+      <PageTitle title="Registro de Alertas" />
+      <div className="min-h-screen text-gray-300">
     <Navbar />
     <main className="p-6 space-y-6">
 <div className="bg-gray-700 p-4 rounded-lg shadow">
@@ -670,6 +673,7 @@ const drawBoxes = (
         )}
       </main>
     </div>
+    </>
   );
 };
 

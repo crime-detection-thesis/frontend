@@ -6,6 +6,7 @@ import { createSurveillanceCenter } from '../api/surveillance';
 import { completeRegistration } from '../api/auth';
 import Button from '../components/Button';
 import FormContainer from '../components/FormContainer';
+import PageTitle from '../components/PageTitle';
 import {
     GoogleMap,
     useLoadScript,
@@ -95,7 +96,9 @@ export default function CreateSurveillanceCenter() {
     if (!isLoaded) return <p>Cargando mapa...</p>;
 
     return (
-      <FormContainer title="Crear Centro de Vigilancia">
+      <>
+        <PageTitle title="Crear Centro de Vigilancia" />
+        <FormContainer title="Crear Centro de Vigilancia">
           <form onSubmit={handleCreate}>
               <div className="mb-4">
                   <label htmlFor="name" className="block mb-1">
@@ -145,6 +148,7 @@ export default function CreateSurveillanceCenter() {
               </div>
           </form>
       </FormContainer>
+      </>
     );
 }
 

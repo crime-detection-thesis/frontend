@@ -12,3 +12,6 @@ export const getSurveillanceCenters = () =>
 
 export const createSurveillanceCenter = (name: string, latitude: number, longitude: number) =>
   apiClient.post<Center>('/surveillance/', { name, latitude, longitude });
+
+export const getVideoGatewayUrl = (surveillanceCenterId: number) =>
+  apiClient.get<{ url: string }>(`/surveillance/video-gateway-url/${surveillanceCenterId}/`);

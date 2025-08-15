@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { connectToWebSocket } from '../services/webrtcService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface StreamViewerProps {
   id: number;
@@ -17,6 +18,7 @@ const StreamViewer: React.FC<StreamViewerProps> = ({ id, userId, onError, onDete
   const lastAlertTimes = useRef<Record<number, number>>({});
   const [showAlert, setShowAlert] = useState(false);
   const alertTimeoutRef = useRef<number | null>(null);
+  const { videoGatewayUrl, } = useAuth();
 
   const onDetection = useCallback((cameraId: number) => {
     const now = Date.now();
@@ -43,6 +45,7 @@ const StreamViewer: React.FC<StreamViewerProps> = ({ id, userId, onError, onDete
     const { ws, pc } = connectToWebSocket(
       id,
       userId,
+      videoGatewayUrl || '',
       videoRef.current,
       (msg) => {
         onError(id, msg);
